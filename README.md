@@ -1,1 +1,1 @@
-# property-price-machine-learning-project
+# real-estate-machine-learning-project
