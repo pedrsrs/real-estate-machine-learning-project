@@ -2,7 +2,7 @@ from selenium import webdriver
 import time
 from selenium.webdriver.common.by import By
 
-def generate_alternate_links(original_links):
+def generate_other_payment_links(original_links):
     alternate_links = []
 
     for link in original_links:
@@ -15,7 +15,7 @@ def generate_alternate_links(original_links):
     
     return alternate_links
 
-def generate_alternate_property(original_links):
+def generate_other_property_types(original_links):
     alternate_links = []
 
     for link in original_links:
@@ -28,36 +28,48 @@ def generate_alternate_property(original_links):
     
     return alternate_links
 
-driver = webdriver.Chrome()
+def add_query_parameters(links):
+    updated_links = []
+    
+    for link in links:
+        if '/apartamentos/' in link:
+            for variant in ['?rts=305', '?rts=304', '?rts=303', '?rts=302', ""]:
+                updated_links.append(link + variant)
+        elif '/casas/' in link:
+            for variant in ['?rts=301', '?rts=300', ""]:
+                updated_links.append(link + variant)
+        else:
+            updated_links.append(link)
 
-driver.get('https://www.olx.com.br/imoveis/venda/apartamentos/estado-sp/sao-paulo-e-regiao')
+    return updated_links
 
-time.sleep(5)
-outer_divs = driver.find_elements(By.CSS_SELECTOR, 'div > div.olx-d-flex.olx-fd-column:nth-of-type(1) > div > div > div > div > a.olx-link.olx-link--caption.olx-link--main')
-original_links = [outer_div.get_attribute('href') for outer_div in outer_divs]
+def write_to_file(links, filename="unfiltered_links.txt"):
+    with open(filename, 'w') as file:
+        for link in links:
+            file.write(link + '\n')
 
-alternate_links = generate_alternate_links(original_links)
-combined_links = original_links + alternate_links
+def main():
+    driver = webdriver.Chrome()
+    driver.get('https://www.olx.com.br/imoveis/venda/apartamentos/estado-mg/belo-horizonte-e-regiao')
+    time.sleep(5)
 
-new_alternate_links = generate_alternate_property(combined_links)
+    outer_divs = driver.find_elements(By.CSS_SELECTOR, 'div > div.olx-d-flex.olx-fd-column:nth-of-type(1) > div > div > div > div > a.olx-link.olx-link--caption.olx-link--main')
+    original_links = [outer_div.get_attribute('href') for outer_div in outer_divs]
 
-new_combined = combined_links + new_alternate_links
-for link in new_combined:
-    print(link)
+    other_payment_methods = generate_other_payment_links(original_links)
+    all_payment_types_links  = original_links + other_payment_methods 
 
-time.sleep(20)
+    other_property_types = generate_other_property_types(all_payment_types_links)
 
-driver.quit()
+    all_property_types_links = all_payment_types_links + other_property_types
 
+    links_with_queries = add_query_parameters(all_property_types_links)
 
-#https://www.olx.com.br/imoveis/venda + apartamento / estado / cidade / zona ? (preço) & rts = 
+    write_to_file(links_with_queries)
 
-#?rts=306 - padrao
-#?rts=305 - loft
-#?rts=303 - duplex ou triplex
-#?rts=303 - Kitnet
-#?rts=302 - cobertura
+    time.sleep(20)
 
-#?rts=306 - padrao
-#?rts=301 - casa de vila
-#?rts=300 - casa de condominio
+    driver.quit()
+
+if __name__ == "__main__":
+    main()
