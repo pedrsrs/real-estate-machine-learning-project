@@ -3,6 +3,15 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from kafka import KafkaProducer
+from protobuf.scraped_data_pb2 import ScrapedDataInfo
+import json
+
+producer_conf = {
+    'bootstrap.servers': 'localhost:9092',
+}
+
+producer = KafkaProducer(bootstrap_servers=['localhost:9093'], api_version=(0, 10, 1))
 
 def initialize_driver():
     return webdriver.Chrome()
@@ -21,24 +30,43 @@ def extract_information(element):
     location = element.find_element(By.CSS_SELECTOR, "div.olx-ad-card__location-date-container > p").text
     data = element.find_element(By.CSS_SELECTOR, "p.olx-ad-card__date--horizontal").text
 
+    # Find other_costs elements, set to an empty list if not found
     other_costs_elements = element.find_elements(By.CSS_SELECTOR, "div.olx-ad-card__priceinfo.olx-ad-card__priceinfo--horizontal > p")
-    other_costs = [el.text for el in other_costs_elements]
+    other_costs_values = [el.text for el in other_costs_elements] if other_costs_elements else []
 
+    # Find spans elements, set to an empty list if not found
     spans = element.find_elements(By.CSS_SELECTOR, 'li.olx-ad-card__labels-item > span')
-    labels = [span.get_attribute('aria-label') for span in spans]
+    labels_values = [span.get_attribute('aria-label') if span.get_attribute('aria-label') else 'No Label' for span in spans]
+    return title, property_price, location, data, other_costs_values, labels_values
 
-    return title, property_price, location, data, other_costs, labels
+def send_to_kafka(url, title, property_price, location, data, other_costs_values, labels_values):
+    info_message = ScrapedDataInfo(
+        url=url,
+        title=title,
+        property_price=property_price,
+        location=location,
+        data=data,
+        other_costs=other_costs_values,
+        labels=labels_values,
+    )
 
-def print_information(url, title, property_price, location, data, other_costs, labels):
-    print(url)
-    print(title)
-    print(property_price)
-    print(location)
-    print(data)
-    print(other_costs)
-    print(labels)
-    print("-" * 10)
-    #time.sleep(0.3)
+    # Serialize the protobuf message to bytes
+    serialized_info = info_message.SerializeToString()
+
+    # Replace 'mytopic' with the actual Kafka topic you want to use
+    kafka_topic = 'mytopic'
+
+    try:
+        # Produce the protobuf message to Kafka topic
+        producer.send(kafka_topic, value=serialized_info)
+
+        # Flush messages to ensure they are sent
+        producer.flush()
+
+        print(f"Message sent to Kafka: {info_message}")
+
+    except Exception as e:
+        print(f"Error sending message to Kafka: {e}")
 
 def click_next_page(driver):
     try:
@@ -62,7 +90,8 @@ def main():
         for element in elements:
             driver.execute_script("arguments[0].scrollIntoView(true);", element)
             info = extract_information(element)
-            print_information(url, *info)
+            print(info)
+            send_to_kafka(url, *info)
 
         if not click_next_page(driver):
             break
