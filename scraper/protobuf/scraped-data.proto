@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+message ScrapedDataInfo {
+    string url = 1;
+    string title = 2;
+    string property_price = 3;
+    string location = 4;
+    string data = 5;
+    repeated string other_costs = 6;
+    repeated string labels = 7;
+}
