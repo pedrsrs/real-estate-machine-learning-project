@@ -3,6 +3,7 @@ import re
 from kafka import KafkaConsumer
 from protobuf.scraped_data_pb2 import ScrapedDataInfo  
 from protobuf.parsed_property_data_pb2 import ParsedPropertyData  
+import psycopg2
 
 def parse_property_type(url):
     tipo = None
@@ -41,18 +42,18 @@ def parse_category(url):
 def parse_date(date):
     today = datetime.date.today() 
     month_names = {
-        "jan.": "01",
-        "fev.": "02",
-        "mar.": "03",
-        "abr.": "04",
-        "mai.": "05",
-        "jun.": "06",
-        "jul.": "07",
-        "ago.": "08",
-        "set.": "09",
-        "out.": "10",
-        "nov.": "11",
-        "dez.": "12"
+        "jan": "01",
+        "fev": "02",
+        "mar": "03",
+        "abr": "04",
+        "mai": "05",
+        "jun": "06",
+        "jul": "07",
+        "ago": "08",
+        "set": "09",
+        "out": "10",
+        "nov": "11",
+        "dez": "12"
     }
 
     transformed_date = None
@@ -64,14 +65,17 @@ def parse_date(date):
     elif "anteontem" in date.lower():
         transformed_date = today - datetime.timedelta(days=2)
     else:
-        date_str = date.replace("de", "")
+        date_str = date.split(",")[0]
+        date_str = date_str.replace(" de ", " ")
         day, month_str = date_str.split()
         month = month_names[month_str]
-        year = today.year if (today.month > int(month)) or (today.month == int(month) and today.day > (int(day) + 2)) else today.year - 1
+        print(month_str)
+        print(month)
+        year = today.year if (today.month > int(month)) or (today.month == int(month) and today.day >= (int(day) + 2)) else today.year - 1
         transformed_date = datetime.date(year, int(month), int(day))
 
     if transformed_date is not None:
-        transformed_date_str = transformed_date.strftime('%d/%m/%Y')
+        transformed_date_str = transformed_date.strftime('%Y-%m-%d')
     
     return transformed_date_str
 
@@ -93,8 +97,10 @@ def parse_property_price(unparsed_property_price):
     return int(concatenated_price)
 
 def parse_location(location):
-    cidade = location.split(",")[0]
-    bairro = location.split(",")[1]
+    if "," in location:
+        cidade, bairro = location.split(",", 1)  
+    else:
+        cidade, bairro = None, location
 
     return cidade, bairro
 
@@ -123,23 +129,67 @@ def parse_information(labels):
 
     return quartos, area, vagas_garagem, banheiros
 
-def send_postgres_venda(message):
-    quartos = area = vagas_garagem = banheiros = None
+def send_postgres_venda(data):
+    try:
+        conn = psycopg2.connect(
+            host="localhost",
+            database="real-estate-db",
+            user="user",
+            password="passwd"
+        )
 
+        cursor = conn.cursor()
 
-def send_postgres_aluguel(message):
-    quartos = area = vagas_garagem = banheiros = None
+        cursor.execute("""
+            INSERT INTO propriedades_venda (titulo, tipo, subtipo, valor, iptu, condominio, quartos, area, vagas_garagem, banheiros, cidade, bairro, regiao, data)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, data)
 
+        conn.commit()
+        print("Data sent to propriedades_venda table successfully!")
+
+    except Exception as e:
+        print(f"Error: {e}")
+
+    finally:
+        if conn is not None:
+            conn.close()
+
+def send_postgres_aluguel(data):
+    try:
+        conn = psycopg2.connect(
+            host="localhost",
+            database="real-estate-db",
+            user="user",
+            password="passwd"
+        )
+
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            INSERT INTO propriedades_aluguel (titulo, tipo, subtipo, valor, iptu, condominio, quartos, area, vagas_garagem, banheiros, cidade, bairro, regiao, data)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, data)
+
+        conn.commit()
+        print("Data sent to propriedades_aluguel table successfully!")
+
+    except Exception as e:
+        print(f"Error: {e}")
+
+    finally:
+        if conn is not None:
+            conn.close()
 
 def main():
     conf = {
-        'bootstrap.servers': 'localhost:9093', 
-        'group.id': 'group1',  
-        'auto.offset.reset': 'earliest',  
+        'bootstrap.servers': 'localhost:9092',  
+        'group.id': 'group1',
+        'auto.offset.reset': 'earliest',
     }
 
-    consumer = KafkaConsumer('mytopic', bootstrap_servers=['localhost:9093'], api_version=(0, 10))
-    consumer.subscribe(['mytopic'])
+    consumer = KafkaConsumer('unparsed-data', bootstrap_servers=['localhost:9092'], api_version=(0, 10)) 
+    consumer.subscribe(['unparsed-data'])  
 
     try:
         while True:
@@ -156,27 +206,29 @@ def main():
                 quartos, area, vagas_garagem, banheiros = parse_information(scraped_data_info.labels)
                 cidade, bairro = parse_location(scraped_data_info.location)
                 regiao = parse_region(scraped_data_info.url)
+                data = parse_date(scraped_data_info.data)
 
-                message = ParsedPropertyData(
-                    titulo=titulo,
-                    tipo=tipo,
-                    subtipo=subtipo,
-                    valor=valor,
-                    iptu=iptu,
-                    condominio=condominio,
-                    quartos=quartos,
-                    area=area,
-                    vagas_garagem=vagas_garagem,
-                    banheiros=banheiros,
-                    cidade=cidade,
-                    bairro=bairro,
-                    regiao=regiao
+                data = (
+                    titulo,
+                    tipo,
+                    subtipo,
+                    valor,
+                    iptu,
+                    condominio,
+                    quartos,
+                    area,
+                    vagas_garagem,
+                    banheiros,
+                    cidade,
+                    bairro,
+                    regiao,
+                    data
                 )
 
                 if categoria == "venda":
-                    send_postgres_venda(message)
+                    send_postgres_venda(data)
                 elif categoria == "aluguel":
-                    send_postgres_aluguel(message)
+                    send_postgres_aluguel(data)
 
     except KeyboardInterrupt:
         pass
