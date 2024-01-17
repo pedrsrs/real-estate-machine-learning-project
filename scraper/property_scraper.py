@@ -4,14 +4,14 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from kafka import KafkaProducer
+from selenium.common.exceptions import TimeoutException  
 from protobuf.scraped_data_pb2 import ScrapedDataInfo
-import json
 
 producer_conf = {
     'bootstrap.servers': 'localhost:9092',
 }
 
-producer = KafkaProducer(bootstrap_servers=['localhost:9093'], api_version=(0, 10, 1))
+producer = KafkaProducer(bootstrap_servers=['localhost:9092'], api_version=(0, 10, 1))
 
 def initialize_driver():
     return webdriver.Chrome()
@@ -19,10 +19,16 @@ def initialize_driver():
 def get_elements(driver, url, class_name):
     driver.get(url)
 
-    elements = WebDriverWait(driver, 35).until(
-        EC.presence_of_all_elements_located((By.CLASS_NAME, class_name))
-    )
-    return elements
+    try:
+        elements = WebDriverWait(driver, 20).until(
+            EC.presence_of_all_elements_located((By.CLASS_NAME, class_name))
+        )
+        return elements
+    except TimeoutException:
+        print("Timeout while waiting for elements. Refreshing the page and retrying.")
+        driver.refresh()
+        time.sleep(5) 
+        return get_elements(driver, url, class_name)
 
 def extract_information(element):
     title = element.find_element(By.CSS_SELECTOR, "h2").text
@@ -30,11 +36,9 @@ def extract_information(element):
     location = element.find_element(By.CSS_SELECTOR, "div.olx-ad-card__location-date-container > p").text
     data = element.find_element(By.CSS_SELECTOR, "p.olx-ad-card__date--horizontal").text
 
-    # Find other_costs elements, set to an empty list if not found
     other_costs_elements = element.find_elements(By.CSS_SELECTOR, "div.olx-ad-card__priceinfo.olx-ad-card__priceinfo--horizontal > p")
     other_costs_values = [el.text for el in other_costs_elements] if other_costs_elements else []
 
-    # Find spans elements, set to an empty list if not found
     spans = element.find_elements(By.CSS_SELECTOR, 'li.olx-ad-card__labels-item > span')
     labels_values = [span.get_attribute('aria-label') if span.get_attribute('aria-label') else 'No Label' for span in spans]
     return title, property_price, location, data, other_costs_values, labels_values
@@ -49,18 +53,12 @@ def send_to_kafka(url, title, property_price, location, data, other_costs_values
         other_costs=other_costs_values,
         labels=labels_values,
     )
-
-    # Serialize the protobuf message to bytes
     serialized_info = info_message.SerializeToString()
 
-    # Replace 'mytopic' with the actual Kafka topic you want to use
-    kafka_topic = 'mytopic'
+    kafka_topic = 'unparsed-data'
 
     try:
-        # Produce the protobuf message to Kafka topic
         producer.send(kafka_topic, value=serialized_info)
-
-        # Flush messages to ensure they are sent
         producer.flush()
 
         print(f"Message sent to Kafka: {info_message}")
@@ -81,7 +79,7 @@ def click_next_page(driver):
 def main():
     driver = initialize_driver()
 
-    url = 'https://www.olx.com.br/imoveis/venda/estado-sp/sao-paulo-e-regiao/zona-sul?pe=550000&ps=500001'
+    url = 'https://www.olx.com.br/imoveis/venda/apartamentos/estado-mg/belo-horizonte-e-regiao/pampulha?pe=488282&ps=390626&o=5'
     class_name = 'renderIfVisible'
 
     while True:
