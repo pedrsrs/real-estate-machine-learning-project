@@ -2,7 +2,6 @@ import datetime
 import re
 from kafka import KafkaConsumer
 from protobuf.scraped_data_pb2 import ScrapedDataInfo  
-from protobuf.parsed_property_data_pb2 import ParsedPropertyData  
 import psycopg2
 
 def parse_property_type(url):
@@ -69,8 +68,6 @@ def parse_date(date):
         date_str = date_str.replace(" de ", " ")
         day, month_str = date_str.split()
         month = month_names[month_str]
-        print(month_str)
-        print(month)
         year = today.year if (today.month > int(month)) or (today.month == int(month) and today.day >= (int(day) + 2)) else today.year - 1
         transformed_date = datetime.date(year, int(month), int(day))
 
@@ -199,7 +196,7 @@ def main():
 
                 titulo = scraped_data_info.title
                 tipo = parse_property_type(scraped_data_info.url)
-                subtipo = parse_property_subtype(scraped_data_info.url)
+                subtipo = [parse_property_subtype(scraped_data_info.url)]
                 categoria = parse_category(scraped_data_info.url)
                 valor = parse_property_price(scraped_data_info.property_price)
                 iptu, condominio = parse_other_costs(scraped_data_info.other_costs)
