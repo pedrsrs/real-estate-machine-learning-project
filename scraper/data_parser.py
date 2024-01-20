@@ -1,8 +1,10 @@
 import datetime
 import re
 from kafka import KafkaConsumer
-from protobuf.scraped_data_pb2 import ScrapedDataInfo  
+from protobuf.unparsed_html_message_pb2 import UnparsedHtmlMessage  
 import psycopg2
+from bs4 import BeautifulSoup
+
 
 def parse_property_type(url):
     tipo = None
@@ -26,7 +28,7 @@ def parse_property_subtype(url):
         if filter in url:
             return subtype
 
-    return None
+    return 'padrão'
 
 def parse_category(url):
     categoria = None
@@ -178,6 +180,30 @@ def send_postgres_aluguel(data):
         if conn is not None:
             conn.close()
 
+def parse_html(html):
+
+    soup = BeautifulSoup(html, 'html.parser')
+
+    title = soup.select_one('h2').text.strip()
+    property_price = soup.select_one('h3.olx-text.olx-text--body-large.olx-text--block.olx-text--semibold.olx-ad-card__price').text.strip()
+    location = soup.select_one('div.olx-ad-card__location-date-container > p').text.strip()
+    data = soup.select_one('p.olx-ad-card__date--horizontal').text.strip()
+
+    other_costs_elements = soup.select('div.olx-ad-card__priceinfo.olx-ad-card__priceinfo--horizontal > p')
+    other_costs_values = [el.text.strip() for el in other_costs_elements] if other_costs_elements else []
+
+    spans = soup.select('li.olx-ad-card__labels-item > span')
+    labels_values = [span.get('aria-label', 'No Label').strip() for span in spans]
+
+    return {
+        'title': title,
+        'property_price': property_price,
+        'location': location,
+        'data': data,
+        'other_costs_values': other_costs_values,
+        'labels_values': labels_values
+    }
+
 def main():
     conf = {
         'bootstrap.servers': 'localhost:9092',  
@@ -191,19 +217,21 @@ def main():
     try:
         while True:
             for message in consumer:
-                scraped_data_info = ScrapedDataInfo()
+                scraped_data_info = UnparsedHtmlMessage()
                 scraped_data_info.ParseFromString(message.value)
 
-                titulo = scraped_data_info.title
+                parsed_info = parse_html(scraped_data_info.unparsed_html)
+
+                titulo = parsed_info['title']
                 tipo = parse_property_type(scraped_data_info.url)
                 subtipo = [parse_property_subtype(scraped_data_info.url)]
                 categoria = parse_category(scraped_data_info.url)
-                valor = parse_property_price(scraped_data_info.property_price)
-                iptu, condominio = parse_other_costs(scraped_data_info.other_costs)
-                quartos, area, vagas_garagem, banheiros = parse_information(scraped_data_info.labels)
-                cidade, bairro = parse_location(scraped_data_info.location)
+                valor = parse_property_price(parsed_info['property_price'])
+                iptu, condominio = parse_other_costs(parsed_info['other_costs_values'])
+                quartos, area, vagas_garagem, banheiros = parse_information(parsed_info['labels_values'])
+                cidade, bairro = parse_location(parsed_info['location'])
                 regiao = parse_region(scraped_data_info.url)
-                data = parse_date(scraped_data_info.data)
+                data = parse_date(parsed_info['data'])
 
                 data = (
                     titulo,
@@ -221,6 +249,8 @@ def main():
                     regiao,
                     data
                 )
+
+                print(data)
 
                 if categoria == "venda":
                     send_postgres_venda(data)
