@@ -8,9 +8,9 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException  
 from selenium.webdriver.chrome.options import Options
-from protobuf.scraped_data_pb2 import ScrapedDataInfo
+from protobuf.unparsed_html_message_pb2 import UnparsedHtmlMessage
 
-NUMBER_OF_DRIVERS = 3
+NUMBER_OF_DRIVERS = 4
 
 producer_conf = {
     'bootstrap.servers': 'localhost:9092',
@@ -48,28 +48,10 @@ def get_elements(driver, url, class_name):
         time.sleep(5) 
         return get_elements(driver, url, class_name)
 
-def extract_information(element):
-    title = element.find_element(By.CSS_SELECTOR, "h2").text
-    property_price = element.find_element(By.CSS_SELECTOR, "h3.olx-text.olx-text--body-large.olx-text--block.olx-text--semibold.olx-ad-card__price").text
-    location = element.find_element(By.CSS_SELECTOR, "div.olx-ad-card__location-date-container > p").text
-    data = element.find_element(By.CSS_SELECTOR, "p.olx-ad-card__date--horizontal").text
-
-    other_costs_elements = element.find_elements(By.CSS_SELECTOR, "div.olx-ad-card__priceinfo.olx-ad-card__priceinfo--horizontal > p")
-    other_costs_values = [el.text for el in other_costs_elements] if other_costs_elements else []
-
-    spans = element.find_elements(By.CSS_SELECTOR, 'li.olx-ad-card__labels-item > span')
-    labels_values = [span.get_attribute('aria-label') if span.get_attribute('aria-label') else 'No Label' for span in spans]
-    return title, property_price, location, data, other_costs_values, labels_values
-
-def send_to_kafka(url, title, property_price, location, data, other_costs_values, labels_values):
-    info_message = ScrapedDataInfo(
+def send_to_kafka(url, unparsed_html):
+    info_message = UnparsedHtmlMessage(
         url=url,
-        title=title,
-        property_price=property_price,
-        location=location,
-        data=data,
-        other_costs=other_costs_values,
-        labels=labels_values,
+        unparsed_html=unparsed_html
     )
     serialized_info = info_message.SerializeToString()
 
@@ -99,10 +81,13 @@ def scrape_data(driver, url, class_name):
         elements = get_elements(driver, url, class_name)
 
         for element in elements:
-            driver.execute_script("arguments[0].scrollIntoView(true);", element)
-            info = extract_information(element)
-            print(info)
-            send_to_kafka(url, *info)
+            try:
+                content_element = element.find_element(By.XPATH, './/div[contains(@class, "olx-ad-card__content")]')
+                driver.execute_script("arguments[0].scrollIntoView(true);", content_element)
+                unparsed_html = content_element.get_attribute("outerHTML")
+                send_to_kafka(url, unparsed_html)
+            except Exception as e:
+                print(f"Error extracting outerHTML: {e}")
 
         if not click_next_page(driver):
             break
@@ -118,7 +103,6 @@ def run_scraping_process(driver, urls, class_name):
         scrape_data(driver, url, class_name)
 
 if __name__ == "__main__":
-
     df = pd.read_csv('olx_links.csv')
     urls = df['url'].tolist()
 
@@ -127,8 +111,10 @@ if __name__ == "__main__":
     urls_per_thread = len(urls) // len(drivers)
     url_chunks = [urls[i:i+urls_per_thread] for i in range(0, len(urls), urls_per_thread)]
 
+    class_names = ['renderIfVisible']*len(url_chunks)
+
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        executor.map(run_scraping_process, drivers, url_chunks, ['renderIfVisible']*len(url_chunks))
+        executor.map(run_scraping_process, drivers, url_chunks, class_names)
 
     for driver in drivers:
         driver.quit()
