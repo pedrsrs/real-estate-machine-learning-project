@@ -1,11 +1,16 @@
 import time
+import pandas as pd
+from kafka import KafkaProducer
+import concurrent.futures
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from kafka import KafkaProducer
 from selenium.common.exceptions import TimeoutException  
+from selenium.webdriver.chrome.options import Options
 from protobuf.scraped_data_pb2 import ScrapedDataInfo
+
+NUMBER_OF_DRIVERS = 3
 
 producer_conf = {
     'bootstrap.servers': 'localhost:9092',
@@ -14,7 +19,20 @@ producer_conf = {
 producer = KafkaProducer(bootstrap_servers=['localhost:9092'], api_version=(0, 10, 1))
 
 def initialize_driver():
-    return webdriver.Chrome()
+    chrome_options = Options()
+    chrome_options.add_argument("--window-size=1920,1080")
+    chrome_options.add_argument("--disable-extensions")
+    chrome_options.add_argument("--proxy-server='direct://'")
+    chrome_options.add_argument("--proxy-bypass-list=*")
+    chrome_options.add_argument("--start-maximized")
+    chrome_options.add_argument('--headless')
+    chrome_options.add_argument('--disable-gpu')
+    chrome_options.add_argument('--disable-dev-shm-usage')
+    chrome_options.add_argument('--no-sandbox')
+    chrome_options.add_argument('--ignore-certificate-errors')
+    chrome_options.add_argument("--enable-javascript")
+    chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")
+    return webdriver.Chrome(options=chrome_options)
 
 def get_elements(driver, url, class_name):
     driver.get(url)
@@ -73,15 +91,10 @@ def click_next_page(driver):
             next_button.click()
             return True
     except Exception as e:
-        print(f"Error clicking next page button: {e}")
+        print(f"Error clicking the next page button: {e}")
     return False
 
-def main():
-    driver = initialize_driver()
-
-    url = 'https://www.olx.com.br/imoveis/venda/apartamentos/estado-mg/belo-horizonte-e-regiao/pampulha?pe=488282&ps=390626&o=5'
-    class_name = 'renderIfVisible'
-
+def scrape_data(driver, url, class_name):
     while True:
         elements = get_elements(driver, url, class_name)
 
@@ -100,5 +113,22 @@ def main():
         else:
             break
 
+def run_scraping_process(driver, urls, class_name):
+    for url in urls:
+        scrape_data(driver, url, class_name)
+
 if __name__ == "__main__":
-    main()
+
+    df = pd.read_csv('olx_links.csv')
+    urls = df['url'].tolist()
+
+    drivers = [initialize_driver() for _ in range(NUMBER_OF_DRIVERS)]
+
+    urls_per_thread = len(urls) // len(drivers)
+    url_chunks = [urls[i:i+urls_per_thread] for i in range(0, len(urls), urls_per_thread)]
+
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        executor.map(run_scraping_process, drivers, url_chunks, ['renderIfVisible']*len(url_chunks))
+
+    for driver in drivers:
+        driver.quit()
