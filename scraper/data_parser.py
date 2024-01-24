@@ -5,6 +5,12 @@ from protobuf.unparsed_html_message_pb2 import UnparsedHtmlMessage
 import psycopg2
 from bs4 import BeautifulSoup
 
+POSTGRES_HOST = 'localhost'
+POSTGRES_DATABASE = 'real-estate-db'
+POSTGRES_USER = 'user'
+POSTGRES_PASSWORD = 'passwd'
+POSTGRES_VENDA_TABLE = 'propriedades_venda'
+POSTGRES_ALUGUEL_TABLE = 'propriedades_aluguel'
 
 def parse_property_type(url):
     tipo = None
@@ -128,50 +134,25 @@ def parse_information(labels):
 
     return quartos, area, vagas_garagem, banheiros
 
-def send_postgres_venda(data):
+def send_postgres(data, table):
     try:
         conn = psycopg2.connect(
-            host="localhost",
-            database="real-estate-db",
-            user="user",
-            password="passwd"
+            host=POSTGRES_HOST,
+            database=POSTGRES_DATABASE,
+            user=POSTGRES_USER,
+            password=POSTGRES_PASSWORD
         )
 
         cursor = conn.cursor()
 
-        cursor.execute("""
-            INSERT INTO propriedades_venda (titulo, tipo, subtipo, valor, iptu, condominio, quartos, area, vagas_garagem, banheiros, cidade, bairro, regiao, data)
+        query = """
+            INSERT INTO {} (titulo, tipo, subtipo, valor, iptu, condominio, quartos, area, vagas_garagem, banheiros, cidade, bairro, regiao, data)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        """, data)
+        """.format(table)
 
+        cursor.execute(query, data)
         conn.commit()
-        print("Data sent to propriedades_venda table successfully!")
-
-    except Exception as e:
-        print(f"Error: {e}")
-
-    finally:
-        if conn is not None:
-            conn.close()
-
-def send_postgres_aluguel(data):
-    try:
-        conn = psycopg2.connect(
-            host="localhost",
-            database="real-estate-db",
-            user="user",
-            password="passwd"
-        )
-
-        cursor = conn.cursor()
-
-        cursor.execute("""
-            INSERT INTO propriedades_aluguel (titulo, tipo, subtipo, valor, iptu, condominio, quartos, area, vagas_garagem, banheiros, cidade, bairro, regiao, data)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        """, data)
-
-        conn.commit()
-        print("Data sent to propriedades_aluguel table successfully!")
+        print("Data sent to " + table + " table successfully!")
 
     except Exception as e:
         print(f"Error: {e}")
@@ -205,11 +186,6 @@ def parse_html(html):
     }
 
 def main():
-    conf = {
-        'bootstrap.servers': 'localhost:9092',  
-        'group.id': 'group1',
-        'auto.offset.reset': 'earliest',
-    }
 
     consumer = KafkaConsumer('unparsed-data', bootstrap_servers=['localhost:9092'], api_version=(0, 10)) 
     consumer.subscribe(['unparsed-data'])  
@@ -253,9 +229,11 @@ def main():
                 print(data)
 
                 if categoria == "venda":
-                    send_postgres_venda(data)
+                    table = POSTGRES_VENDA_TABLE
+                    send_postgres(data, table)
                 elif categoria == "aluguel":
-                    send_postgres_aluguel(data)
+                    table = POSTGRES_ALUGUEL_TABLE
+                    send_postgres(data, table)
 
     except KeyboardInterrupt:
         pass
