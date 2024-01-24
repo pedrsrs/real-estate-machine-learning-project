@@ -72,7 +72,6 @@ def write_to_file(links, filename=OUTPUT_FILENAME):
             file.write(link + '\n')
 
 def scrape_regions(driver):
-    driver.get(URL)
 
     try:
         elements = WebDriverWait(driver, 20).until(
@@ -88,7 +87,7 @@ def scrape_regions(driver):
 
 def main():
     driver = initialize_driver()
-
+    driver.get(URL)
     original_links = scrape_regions(driver)
 
     other_payment_methods = generate_other_payment_links(original_links)

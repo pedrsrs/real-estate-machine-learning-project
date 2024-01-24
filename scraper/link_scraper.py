@@ -4,21 +4,28 @@ import scrapy
 from scrapy.crawler import CrawlerProcess
 from queue import Queue
 
+INPUT_FILE_NAME = 'unfiltered_links.txt'
+OUTPUT_FILE_NAME = 'olx_links.csv'
+
+MIN_PRICE = 0
+MAX_PRICE = 100000000
+MAX_RESULTS_PER_SEARCH = 5000
+
 class OlxSpider(scrapy.Spider):
     name = 'olx'
-    start_url = 'https://www.olx.com.br/imoveis/venda/estado-sp/sao-paulo-e-regiao/centro'
     custom_headers = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:48.0) Gecko/20100101 Firefox/48.0'}
-    MAX_RESULTS_PER_SEARCH = 5000
-    MIN_PRICE = 0
-    MAX_PRICE = 100000000
 
     def __init__(self):
-        self.link_queue = Queue()  
+        self.link_queue = Queue()
+        self.read_links_from_file()  
+
+    def read_links_from_file(self):
+        with open(INPUT_FILE_NAME, 'r') as f:
+            for link in f:
+                link = link.strip()  
+                self.link_queue.put(link)
 
     def start_requests(self):
-        link = f'{self.start_url}?pe={self.MIN_PRICE + 1}&ps={self.MAX_PRICE}'
-        self.link_queue.put(link)  
-
         if not self.link_queue.empty():
             yield scrapy.Request(self.link_queue.get(), headers=self.custom_headers, callback=self.parse_page)
 
@@ -47,21 +54,31 @@ class OlxSpider(scrapy.Spider):
             yield scrapy.Request(next_link, headers=self.custom_headers, callback=self.parse_page)
 
     def verify_result_size(self, number_of_results):
-        return number_of_results <= self.MAX_RESULTS_PER_SEARCH
+        return number_of_results <= MAX_RESULTS_PER_SEARCH
         
     def divide_links(self, url):
-        min_price = int(re.search(r'pe=(\d+)', url).group(1))
-        max_price = int(re.search(r'ps=(\d+)', url).group(1))
+        if "pe=" in url:
+            min_price = int(re.search(r'pe=(\d+)', url).group(1))
+            max_price = int(re.search(r'ps=(\d+)', url).group(1))
+        else: 
+            min_price = MIN_PRICE
+            max_price = MAX_PRICE
+
         half_point = (min_price + max_price) // 2 
 
+        if "rts=" in url:
+            query_character = "&"
+        else:
+            query_character = "?"
+
         new_links = [
-            f'{self.start_url}?pe={half_point + 1}&ps={max_price}',
-            f'{self.start_url}?pe={min_price}&ps={half_point}'
+            f'{url.split(query_character)[0]}{query_character}pe={half_point + 1}&ps={max_price}',
+            f'{url.split(query_character)[0]}{query_character}pe={min_price}&ps={half_point}'
         ]
         self.link_queue.queue.extendleft(new_links)
     
     def write_to_csv(self, data):
-        with open('output.csv', mode='a', newline='') as file:
+        with open(OUTPUT_FILE_NAME, mode='a', newline='') as file:
             writer = csv.DictWriter(file, fieldnames=["url", "qtd"])
 
             if file.tell() == 0:
