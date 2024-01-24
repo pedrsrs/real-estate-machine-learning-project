@@ -9,8 +9,10 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException  
 from selenium.webdriver.chrome.options import Options
 from protobuf.unparsed_html_message_pb2 import UnparsedHtmlMessage
+from protobuf.scraping_progress_status_pb2 import ScrapingProgressStatus
 
 NUMBER_OF_DRIVERS = 4
+INPUT_FILE = 'olx_links.csv'
 
 producer_conf = {
     'bootstrap.servers': 'localhost:9092',
@@ -48,7 +50,7 @@ def get_elements(driver, url, class_name):
         time.sleep(5) 
         return get_elements(driver, url, class_name)
 
-def send_to_kafka(url, unparsed_html):
+def send_scraped_data_kafka(url, unparsed_html):
     info_message = UnparsedHtmlMessage(
         url=url,
         unparsed_html=unparsed_html
@@ -66,44 +68,72 @@ def send_to_kafka(url, unparsed_html):
     except Exception as e:
         print(f"Error sending message to Kafka: {e}")
 
+def send_scraping_progress_kafka(url, status):
+    progress_message = ScrapingProgressStatus(
+        url=url,
+        status=status
+    )
+    serialized_progress = progress_message.SerializeToString()
+
+    kafka_topic = 'scraping-progress'
+
+    try:
+        producer.send(kafka_topic, value=serialized_progress)
+        producer.flush()
+
+        print(f"Progress message sent to Kafka: {progress_message}")
+
+    except Exception as e:
+        print(f"Error sending progress message to Kafka: {e}")
+
 def click_next_page(driver):
     try:
         next_button = driver.find_element(By.XPATH, '//span[contains(text(), "Próxima página")]')
+        
         if next_button.is_enabled():
             next_button.click()
+
             return True
+        
     except Exception as e:
         print(f"Error clicking the next page button: {e}")
+
     return False
 
-def scrape_data(driver, url, class_name):
+def scrape_data(driver, original_url, class_name):
+    current_url = original_url
+
     while True:
-        elements = get_elements(driver, url, class_name)
+        elements = get_elements(driver, current_url, class_name)
 
         for element in elements:
             try:
                 content_element = element.find_element(By.XPATH, './/div[contains(@class, "olx-ad-card__content")]')
                 driver.execute_script("arguments[0].scrollIntoView(true);", content_element)
                 unparsed_html = content_element.get_attribute("outerHTML")
-                send_to_kafka(url, unparsed_html)
+                send_scraped_data_kafka(original_url, unparsed_html)
+
             except Exception as e:
                 print(f"Error extracting outerHTML: {e}")
 
         if not click_next_page(driver):
+            send_scraping_progress_kafka(original_url, 'finished')
             break
 
         next_url = driver.current_url
-        if next_url != url:
-            url = next_url
+        if next_url != current_url:
+            current_url = next_url
         else:
+            send_scraping_progress_kafka(original_url, 'finished')
             break
 
 def run_scraping_process(driver, urls, class_name):
     for url in urls:
+        send_scraping_progress_kafka(url, 'starting')
         scrape_data(driver, url, class_name)
 
 if __name__ == "__main__":
-    df = pd.read_csv('olx_links.csv')
+    df = pd.read_csv(INPUT_FILE)
     urls = df['url'].tolist()
 
     drivers = [initialize_driver() for _ in range(NUMBER_OF_DRIVERS)]
