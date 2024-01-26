@@ -108,7 +108,7 @@ def scrape_data(driver, original_url, class_name):
 
         for element in elements:
             try:
-                content_element = element.find_element(By.XPATH, './/div[contains(@class, "olx-ad-card__content")]')
+                content_element = element.find_element(By.XPATH, './/div[contains(@class, "olx-ad-card")]')
                 driver.execute_script("arguments[0].scrollIntoView(true);", content_element)
                 unparsed_html = content_element.get_attribute("outerHTML")
                 send_scraped_data_kafka(original_url, unparsed_html)
@@ -129,12 +129,12 @@ def scrape_data(driver, original_url, class_name):
 
 def run_scraping_process(driver, urls, class_name):
     for url in urls:
-        send_scraping_progress_kafka(url, 'starting')
+        send_scraping_progress_kafka(url, 'started')
         scrape_data(driver, url, class_name)
 
 if __name__ == "__main__":
     df = pd.read_csv(INPUT_FILE)
-    urls = df['url'].tolist()
+    urls = df.loc[df['status'] != 'finished', 'url'].tolist()
 
     drivers = [initialize_driver() for _ in range(NUMBER_OF_DRIVERS)]
 
