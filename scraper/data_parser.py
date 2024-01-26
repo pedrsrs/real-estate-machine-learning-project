@@ -110,8 +110,12 @@ def parse_location(location):
     return cidade, bairro
 
 def parse_region(url):
-    pattern = re.compile(r'/([^?/]+)\?')
-    match = pattern.search(url)
+    if "?" in url:
+        pattern = re.compile(r'/([^?/]+)\?')
+        match = pattern.search(url)
+    else:
+        pattern = re.compile(r'/([^/]+)$')
+        match = pattern.search(url)
 
     if match:
         result = match.group(1).replace('-', ' ')
@@ -162,11 +166,14 @@ def send_postgres(data, table):
             conn.close()
 
 def parse_html(html):
-
     soup = BeautifulSoup(html, 'html.parser')
 
-    title = soup.select_one('h2').text.strip()
-    property_price = soup.select_one('h3.olx-text.olx-text--body-large.olx-text--block.olx-text--semibold.olx-ad-card__price').text.strip()
+    title_element = soup.select_one('h2')
+    property_price_element = soup.select_one('h3.olx-text.olx-text--body-large.olx-text--block.olx-text--semibold.olx-ad-card__price')
+
+    title = title_element.text.strip() if title_element else None
+    property_price = property_price_element.text.strip() if property_price_element else None
+
     location = soup.select_one('div.olx-ad-card__location-date-container > p').text.strip()
     data = soup.select_one('p.olx-ad-card__date--horizontal').text.strip()
 
@@ -196,13 +203,19 @@ def main():
                 scraped_data_info = UnparsedHtmlMessage()
                 scraped_data_info.ParseFromString(message.value)
 
-                parsed_info = parse_html(scraped_data_info.unparsed_html)
+                print("-"*10)
+                print(scraped_data_info)
+                print("-"*10)
 
-                titulo = parsed_info['title']
+                parsed_info = parse_html(scraped_data_info.unparsed_html)
+                
+                if parsed_info['title'] is not None:
+                    titulo = parsed_info['title']
                 tipo = parse_property_type(scraped_data_info.url)
                 subtipo = [parse_property_subtype(scraped_data_info.url)]
                 categoria = parse_category(scraped_data_info.url)
-                valor = parse_property_price(parsed_info['property_price'])
+                if parsed_info['property_price'] is not None:
+                    valor = parse_property_price(parsed_info['property_price'])
                 iptu, condominio = parse_other_costs(parsed_info['other_costs_values'])
                 quartos, area, vagas_garagem, banheiros = parse_information(parsed_info['labels_values'])
                 cidade, bairro = parse_location(parsed_info['location'])
@@ -227,13 +240,13 @@ def main():
                 )
 
                 print(data)
-
-                if categoria == "venda":
-                    table = POSTGRES_VENDA_TABLE
-                    send_postgres(data, table)
-                elif categoria == "aluguel":
-                    table = POSTGRES_ALUGUEL_TABLE
-                    send_postgres(data, table)
+                if titulo is not None and valor is not None:
+                    if categoria == "venda":
+                        table = POSTGRES_VENDA_TABLE
+                        send_postgres(data, table)
+                    elif categoria == "aluguel":
+                        table = POSTGRES_ALUGUEL_TABLE
+                        send_postgres(data, table)
 
     except KeyboardInterrupt:
         pass
