@@ -15,6 +15,9 @@ CREATE TABLE public.propriedades_aluguel (
 	"data" date NULL,
 	hash text NULL
 );
+CREATE UNIQUE INDEX idx_aluguel_hash ON propriedades_aluguel (hash);
+CREATE INDEX idx_aluguel_data ON propriedades_aluguel (data);
+CREATE INDEX idx_aluguel_valor ON propriedades_aluguel (valor);
 
 CREATE TABLE public.propriedades_venda (
 	titulo text NULL,
@@ -33,6 +36,10 @@ CREATE TABLE public.propriedades_venda (
 	"data" date NULL,
 	hash text NULL
 );
+CREATE UNIQUE INDEX idx_venda_hash ON propriedades_venda (hash);
+CREATE INDEX idx_venda_data ON propriedades_venda (data);
+CREATE INDEX idx_venda_valor ON propriedades_venda (valor);
+
 
 CREATE OR REPLACE FUNCTION public.calculate_hash_aluguel(new_row propriedades_aluguel)
  RETURNS text
