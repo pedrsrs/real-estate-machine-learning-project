@@ -1,5 +1,16 @@
 version: '3.3'
 services:
+  data-parser:
+    build: ./data-parser
+    volumes:
+      - data-parser:/app
+    depends_on:
+      - kafka
+    environment:
+      - KAFKA_SERVER=localhost:9092
+    networks:
+      - kafka-network
+
   postgres:
     image: postgres:16.1
     restart: unless-stopped
@@ -10,9 +21,10 @@ services:
       - POSTGRES_USER=user
       - POSTGRES_PASSWORD=passwd
       - POSTGRES_DB=real-estate-db
+    command: ["postgres", "-c", "config_file=/etc/postgresql.conf"]
     volumes:
       - ./postgres-data:/var/lib/postgresql/data
-      - ./postgresql.conf:/var/lib/postgresql/data/postgresql.conf
+      - ./postgresql.conf:/etc/postgresql.conf
 
   zookeeper:
     image: wurstmeister/zookeeper:latest
@@ -43,9 +55,11 @@ services:
       KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://localhost:9092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
-      KAFKA_CREATE_TOPICS: "unparsed_data:1:1"
+      KAFKA_CREATE_TOPICS: "unparsed-data:1:1,scraping-progress:1:1"
     depends_on:
       - zookeeper
+    networks:
+      - kafka-network
 
   kconnect:
     image: debezium/connect:1.9
@@ -72,3 +86,6 @@ services:
       - zookeeper
       - postgres
 
+networks:
+  kafka-network:
+    driver: bridge
