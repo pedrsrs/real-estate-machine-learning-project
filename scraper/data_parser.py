@@ -192,6 +192,14 @@ def parse_html(html):
         'labels_values': labels_values
     }
 
+def verify_price(data):
+    if data['tipo']=="aluguel" and data["valor"] <= 100 or data["valor"] > 60000:
+        return False
+    if data['tipo']=="venda" and data["valor"] <= 5000 or (data["valor"]/data["area"]) > 100000:
+        return False
+    else:
+        return True
+
 def main():
 
     consumer = KafkaConsumer('unparsed-data', bootstrap_servers=['localhost:9092'], api_version=(0, 10)) 
@@ -240,7 +248,7 @@ def main():
                 )
 
                 print(data)
-                if titulo is not None and valor is not None:
+                if titulo is not None and valor is not None and verify_price(data):
                     if categoria == "venda":
                         table = POSTGRES_VENDA_TABLE
                         send_postgres(data, table)
