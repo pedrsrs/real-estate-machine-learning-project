@@ -13,7 +13,7 @@ check_csv_status() {
 
 start_time=$(date +%s)
 
-echo -n > olx_links.csv
+#echo -n > olx_links.csv
 echo -n > unfiltered_links.txt
 
 python3 regions.py
@@ -24,8 +24,9 @@ while true; do
         python3 property_scraper.py
     else
         echo "All rows have status 'finished'. No action required."
+        break
     fi
-    sleep 5
+    sleep 
 done
 
 end_time=$(date +%s)
