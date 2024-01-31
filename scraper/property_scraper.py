@@ -3,15 +3,17 @@ import pandas as pd
 from kafka import KafkaProducer
 import concurrent.futures
 from selenium import webdriver
+from selenium.webdriver.firefox.service import Service as FirefoxService
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException  
-from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.firefox.options import Options
+from webdriver_manager.firefox import GeckoDriverManager
 from protobuf.unparsed_html_message_pb2 import UnparsedHtmlMessage
 from protobuf.scraping_progress_status_pb2 import ScrapingProgressStatus
 
-NUMBER_OF_DRIVERS = 4
+NUMBER_OF_DRIVERS = 1
 INPUT_FILE = 'olx_links.csv'
 
 producer_conf = {
@@ -21,20 +23,21 @@ producer_conf = {
 producer = KafkaProducer(bootstrap_servers=['localhost:9092'], api_version=(0, 10, 1))
 
 def initialize_driver():
-    chrome_options = Options()
-    chrome_options.add_argument("--window-size=1920,1080")
-    chrome_options.add_argument("--disable-extensions")
-    chrome_options.add_argument("--proxy-server='direct://'")
-    chrome_options.add_argument("--proxy-bypass-list=*")
-    chrome_options.add_argument("--start-maximized")
-    chrome_options.add_argument('--headless')
-    chrome_options.add_argument('--disable-gpu')
-    chrome_options.add_argument('--disable-dev-shm-usage')
-    chrome_options.add_argument('--no-sandbox')
-    chrome_options.add_argument('--ignore-certificate-errors')
-    chrome_options.add_argument("--enable-javascript")
-    chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")
-    return webdriver.Chrome(options=chrome_options)
+    firefox_options = Options()
+    firefox_options.add_argument("--window-size=1920,1080")
+    firefox_options.add_argument("--disable-extensions")
+    firefox_options.add_argument("--proxy-server='direct://'")
+    firefox_options.add_argument("--proxy-bypass-list=*")
+    firefox_options.add_argument("--start-maximized")
+    firefox_options.add_argument('--headless')
+    firefox_options.add_argument('--disable-gpu')
+    firefox_options.add_argument('--disable-dev-shm-usage')
+    firefox_options.add_argument('--no-sandbox')
+    firefox_options.add_argument('--ignore-certificate-errors')
+    firefox_options.add_argument("--enable-javascript")
+    firefox_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Firefox/97.0 Safari/537.3")
+
+    return webdriver.Firefox(service=FirefoxService(GeckoDriverManager().install()), options=firefox_options)
 
 def get_elements(driver, url, class_name):
     driver.get(url)
