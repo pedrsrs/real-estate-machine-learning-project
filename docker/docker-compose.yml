@@ -5,6 +5,21 @@ services:
     build: ./data-parser
     volumes:
       - ./data-parser:/app
+      - ./protobufs:/app/protobufs
+    depends_on:
+      - kafka
+    environment:
+      - KAFKA_SERVER=kafka:29092
+    networks:
+      - kafka-network
+  
+  scraper-status-updater:
+    container_name: scraper-status-updater
+    build: ./scraper-status-updater
+    volumes:
+      - ./scraper-status-updater:/app
+      - ./scraping-source:/app/data
+      - ./protobufs:/app/protobufs
     depends_on:
       - kafka
     environment:
