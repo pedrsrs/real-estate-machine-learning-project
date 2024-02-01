@@ -8,4 +8,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 EXPOSE 80
 
-CMD ["python3 data-parser.py"]
+CMD ["python3", "data-parser.py"]
