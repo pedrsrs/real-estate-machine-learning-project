@@ -3,17 +3,17 @@ import pandas as pd
 from kafka import KafkaProducer
 import concurrent.futures
 from selenium import webdriver
-from selenium.webdriver.firefox.service import Service as FirefoxService
+from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException  
-from selenium.webdriver.firefox.options import Options
-from webdriver_manager.firefox import GeckoDriverManager
+from selenium.webdriver.chrome.options import Options
+from webdriver_manager.chrome import ChromeDriverManager
 from protobuf.unparsed_html_message_pb2 import UnparsedHtmlMessage
 from protobuf.scraping_progress_status_pb2 import ScrapingProgressStatus
 
-NUMBER_OF_DRIVERS = 1
+NUMBER_OF_DRIVERS = 5
 INPUT_FILE = 'olx_links.csv'
 
 producer_conf = {
@@ -23,25 +23,27 @@ producer_conf = {
 producer = KafkaProducer(bootstrap_servers=['localhost:9092'], api_version=(0, 10, 1))
 
 def initialize_driver():
-    firefox_options = Options()
-    firefox_options.add_argument("--window-size=1920,1080")
-    firefox_options.add_argument("--disable-extensions")
-    firefox_options.add_argument("--proxy-server='direct://'")
-    firefox_options.add_argument("--proxy-bypass-list=*")
-    firefox_options.add_argument("--start-maximized")
-    firefox_options.add_argument('--headless')
-    firefox_options.add_argument('--disable-gpu')
-    firefox_options.add_argument('--disable-dev-shm-usage')
-    firefox_options.add_argument('--no-sandbox')
-    firefox_options.add_argument('--ignore-certificate-errors')
-    firefox_options.add_argument("--enable-javascript")
-    firefox_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Firefox/97.0 Safari/537.3")
+    chrome_options = Options()
+    chrome_options.add_argument("--window-size=1920,1080")
+    chrome_options.add_argument("--disable-extensions")
+    chrome_options.add_argument("--proxy-server='direct://'")
+    chrome_options.add_argument("--proxy-bypass-list=*")
+    chrome_options.add_argument("--start-maximized")
+    chrome_options.add_argument('--headless')
+    chrome_options.add_argument('--disable-gpu')
+    chrome_options.add_argument('--disable-dev-shm-usage')
+    chrome_options.add_argument('--no-sandbox')
+    chrome_options.add_argument('--incognito')
+    chrome_options.add_argument('--ignore-certificate-errors')
+    chrome_options.add_argument("--enable-javascript")
+    chrome_options.add_argument('--disable-application-cache')
+    chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.99 Safari/537.36")
 
-    return webdriver.Firefox(service=FirefoxService(GeckoDriverManager().install()), options=firefox_options)
+    return webdriver.Chrome(options=chrome_options)
+
 
 def get_elements(driver, url, class_name):
     driver.get(url)
-
     try:
         elements = WebDriverWait(driver, 20).until(
             EC.presence_of_all_elements_located((By.CLASS_NAME, class_name))
@@ -50,10 +52,10 @@ def get_elements(driver, url, class_name):
     except TimeoutException:
         print("Timeout while waiting for elements. Refreshing the page and retrying.")
         driver.refresh()
-        time.sleep(5) 
+        time.sleep(1) 
         return get_elements(driver, url, class_name)
 
-def send_scraped_data_kafka(url, unparsed_html):
+def send_scraped_data_kafka(url, unparsed_html, driver_index):
     info_message = UnparsedHtmlMessage(
         url=url,
         unparsed_html=unparsed_html
@@ -66,7 +68,7 @@ def send_scraped_data_kafka(url, unparsed_html):
         producer.send(kafka_topic, value=serialized_info)
         producer.flush()
 
-        print(f"Message sent to Kafka: {info_message}")
+        print(f"Message sent to Kafka by driver {driver_index}")
 
     except Exception as e:
         print(f"Error sending message to Kafka: {e}")
@@ -94,6 +96,7 @@ def click_next_page(driver):
         next_button = driver.find_element(By.XPATH, '//span[contains(text(), "Próxima página")]')
         
         if next_button.is_enabled():
+            time.sleep(2)
             next_button.click()
 
             return True
@@ -103,18 +106,23 @@ def click_next_page(driver):
 
     return False
 
-def scrape_data(driver, original_url, class_name):
+def scrape_data(driver, original_url, class_name, driver_index):
     current_url = original_url
 
     while True:
+        driver.close()  
+        driver = initialize_driver()
+
+        time.sleep(3)
+
         elements = get_elements(driver, current_url, class_name)
 
         for element in elements:
             try:
+                driver.execute_script("arguments[0].scrollIntoView(true);", element)
                 content_element = element.find_element(By.XPATH, './/div[contains(@class, "olx-ad-card")]')
-                driver.execute_script("arguments[0].scrollIntoView(true);", content_element)
                 unparsed_html = content_element.get_attribute("outerHTML")
-                send_scraped_data_kafka(original_url, unparsed_html)
+                send_scraped_data_kafka(original_url, unparsed_html, driver_index)
 
             except Exception as e:
                 print(f"Error extracting outerHTML: {e}")
@@ -126,14 +134,16 @@ def scrape_data(driver, original_url, class_name):
         next_url = driver.current_url
         if next_url != current_url:
             current_url = next_url
+            time.sleep(5)
         else:
             send_scraping_progress_kafka(original_url, 'finished')
             break
 
-def run_scraping_process(driver, urls, class_name):
+def run_scraping_process(driver, urls, class_name, driver_index):
     for url in urls:
         send_scraping_progress_kafka(url, 'started')
-        scrape_data(driver, url, class_name)
+        scrape_data(driver, url, class_name, driver_index)
+        time.sleep(3)
 
 if __name__ == "__main__":
     df = pd.read_csv(INPUT_FILE)
@@ -147,7 +157,8 @@ if __name__ == "__main__":
     class_names = ['renderIfVisible']*len(url_chunks)
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        executor.map(run_scraping_process, drivers, url_chunks, class_names)
+        for i, (driver, url_chunk, class_name) in enumerate(zip(drivers, url_chunks, class_names)):
+            executor.submit(run_scraping_process, driver, url_chunk, class_name, i)
 
     for driver in drivers:
         driver.quit()
