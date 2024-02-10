@@ -13,7 +13,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 from protobuf.unparsed_html_message_pb2 import UnparsedHtmlMessage
 from protobuf.scraping_progress_status_pb2 import ScrapingProgressStatus
 
-NUMBER_OF_DRIVERS = 5
+NUMBER_OF_DRIVERS = 3
 INPUT_FILE = 'olx_links.csv'
 
 producer_conf = {
@@ -29,7 +29,7 @@ def initialize_driver():
     chrome_options.add_argument("--proxy-server='direct://'")
     chrome_options.add_argument("--proxy-bypass-list=*")
     chrome_options.add_argument("--start-maximized")
-    chrome_options.add_argument('--headless')
+    #chrome_options.add_argument('--headless')
     chrome_options.add_argument('--disable-gpu')
     chrome_options.add_argument('--disable-dev-shm-usage')
     chrome_options.add_argument('--no-sandbox')
@@ -41,19 +41,20 @@ def initialize_driver():
 
     return webdriver.Chrome(options=chrome_options)
 
-
-def get_elements(driver, url, class_name):
+def get_elements(driver, url):
     driver.get(url)
+    time.sleep(3)
     try:
+        time.sleep(4)
         elements = WebDriverWait(driver, 20).until(
-            EC.presence_of_all_elements_located((By.CLASS_NAME, class_name))
+            EC.presence_of_all_elements_located((By.XPATH, "/html/body/div[1]/div[1]/main/div/div[2]/main/div[4]/div[contains(@class, 'renderIfVisible')]"))
         )
         return elements
     except TimeoutException:
         print("Timeout while waiting for elements. Refreshing the page and retrying.")
         driver.refresh()
         time.sleep(1) 
-        return get_elements(driver, url, class_name)
+        return get_elements(driver, url)
 
 def send_scraped_data_kafka(url, unparsed_html, driver_index):
     info_message = UnparsedHtmlMessage(
@@ -96,7 +97,7 @@ def click_next_page(driver):
         next_button = driver.find_element(By.XPATH, '//span[contains(text(), "Próxima página")]')
         
         if next_button.is_enabled():
-            time.sleep(2)
+            time.sleep(3)
             next_button.click()
 
             return True
@@ -106,23 +107,25 @@ def click_next_page(driver):
 
     return False
 
-def scrape_data(driver, original_url, class_name, driver_index):
+def scrape_data(driver, original_url, driver_index):
     current_url = original_url
 
     while True:
+        time.sleep(5)
         driver.close()  
         driver = initialize_driver()
 
         time.sleep(3)
 
-        elements = get_elements(driver, current_url, class_name)
+        elements = get_elements(driver, current_url)
 
         for element in elements:
             try:
                 driver.execute_script("arguments[0].scrollIntoView(true);", element)
-                content_element = element.find_element(By.XPATH, './/div[contains(@class, "olx-ad-card")]')
-                unparsed_html = content_element.get_attribute("outerHTML")
-                send_scraped_data_kafka(original_url, unparsed_html, driver_index)
+                content_element = element.find_element(By.XPATH, './/section/div[contains(@class, "olx-ad-card__content")]')
+                if content_element:
+                    unparsed_html = content_element.get_attribute("outerHTML")
+                    send_scraped_data_kafka(original_url, unparsed_html, driver_index)
 
             except Exception as e:
                 print(f"Error extracting outerHTML: {e}")
@@ -139,10 +142,10 @@ def scrape_data(driver, original_url, class_name, driver_index):
             send_scraping_progress_kafka(original_url, 'finished')
             break
 
-def run_scraping_process(driver, urls, class_name, driver_index):
+def run_scraping_process(driver, urls, driver_index):
     for url in urls:
         send_scraping_progress_kafka(url, 'started')
-        scrape_data(driver, url, class_name, driver_index)
+        scrape_data(driver, url, driver_index)
         time.sleep(3)
 
 if __name__ == "__main__":
@@ -154,11 +157,9 @@ if __name__ == "__main__":
     urls_per_thread = len(urls) // len(drivers)
     url_chunks = [urls[i:i+urls_per_thread] for i in range(0, len(urls), urls_per_thread)]
 
-    class_names = ['renderIfVisible']*len(url_chunks)
-
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        for i, (driver, url_chunk, class_name) in enumerate(zip(drivers, url_chunks, class_names)):
-            executor.submit(run_scraping_process, driver, url_chunk, class_name, i)
+        for i, (driver, url_chunk) in enumerate(zip(drivers, url_chunks)):
+            executor.submit(run_scraping_process, driver, url_chunk, i)
 
     for driver in drivers:
         driver.quit()
