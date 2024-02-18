@@ -1,9 +1,9 @@
 import datetime
 import re
 from kafka import KafkaConsumer
-from protobuf.unparsed_html_message_pb2 import UnparsedHtmlMessage  
+from protobufs.unparsed_html_message_pb2 import UnparsedHtmlMessage  
 import psycopg2
-from bs4 import BeautifulSoup
+import selectolax
 
 POSTGRES_HOST = 'postgres'
 POSTGRES_DATABASE = 'real-estate-db'
@@ -166,21 +166,21 @@ def send_postgres(data, table):
             conn.close()
 
 def parse_html(html):
-    soup = BeautifulSoup(html, 'html.parser')
+    html_element = selectolax.HTML(html)
 
-    title_element = soup.select_one('h2')
-    property_price_element = soup.select_one('h3.olx-text.olx-text--body-large.olx-text--block.olx-text--semibold.olx-ad-card__price')
+    title_element = html_element.css('h2').first
+    property_price_element = html_element.css('h3.olx-text.olx-text--body-large.olx-text--block.olx-text--semibold.olx-ad-card__price').first
 
-    title = title_element.text.strip() if title_element else None
-    property_price = property_price_element.text.strip() if property_price_element else None
+    title = title_element.text_content().strip() if title_element else None
+    property_price = property_price_element.text_content().strip() if property_price_element else None
 
-    location = soup.select_one('div.olx-ad-card__location-date-container > p').text.strip()
-    data = soup.select_one('p.olx-ad-card__date--horizontal').text.strip()
+    location = html_element.css('div.olx-ad-card__location-date-container > p').first.text_content().strip()
+    data = html_element.css('p.olx-ad-card__date--horizontal').first.text_content().strip()
 
-    other_costs_elements = soup.select('div.olx-ad-card__priceinfo.olx-ad-card__priceinfo--horizontal > p')
-    other_costs_values = [el.text.strip() for el in other_costs_elements] if other_costs_elements else []
+    other_costs_elements = html_element.css('div.olx-ad-card__priceinfo.olx-ad-card__priceinfo--horizontal > p')
+    other_costs_values = [el.text_content().strip() for el in other_costs_elements] if other_costs_elements else []
 
-    spans = soup.select('li.olx-ad-card__labels-item > span')
+    spans = html_element.css('li.olx-ad-card__labels-item > span')
     labels_values = [span.get('aria-label', 'No Label').strip() for span in spans]
 
     return {
