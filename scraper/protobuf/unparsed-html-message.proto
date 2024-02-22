@@ -1,6 +1,0 @@
-syntax = "proto3";
-
-message UnparsedHtmlMessage {
-    string url = 1;
-    string unparsed_html = 2;
-}
