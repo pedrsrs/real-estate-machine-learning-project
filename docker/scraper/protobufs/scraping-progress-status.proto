@@ -1,6 +1,0 @@
-syntax = "proto3";
-
-message ScrapingProgressStatus {
-    string url = 1;
-    string status = 2;
-}

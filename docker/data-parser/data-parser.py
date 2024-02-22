@@ -1,9 +1,9 @@
-import datetime
 import re
-from kafka import KafkaConsumer
-from protobufs.unparsed_html_message_pb2 import UnparsedHtmlMessage  
+import datetime
 import psycopg2
-import selectolax
+from kafka import KafkaConsumer
+from selectolax.parser import HTMLParser
+from protobufs.unparsed_html_message_pb2 import UnparsedHtmlMessage  
 
 POSTGRES_HOST = 'postgres'
 POSTGRES_DATABASE = 'real-estate-db'
@@ -11,6 +11,7 @@ POSTGRES_USER = 'user'
 POSTGRES_PASSWORD = 'passwd'
 POSTGRES_VENDA_TABLE = 'propriedades_venda'
 POSTGRES_ALUGUEL_TABLE = 'propriedades_aluguel'
+SCRAPING_DATE_RECORD = 'scraping_start_date.txt'
 
 def parse_property_type(url):
     tipo = None
@@ -84,7 +85,6 @@ def parse_date(date):
     
     return transformed_date_str
 
-
 def parse_other_costs(other_costs):
     iptu = condominio = None
 
@@ -150,8 +150,8 @@ def send_postgres(data, table):
         cursor = conn.cursor()
 
         query = """
-            INSERT INTO {} (titulo, tipo, subtipo, valor, iptu, condominio, quartos, area, vagas_garagem, banheiros, cidade, bairro, regiao, data)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO {} (titulo, tipo, subtipo, valor, iptu, condominio, quartos, area, vagas_garagem, banheiros, cidade, bairro, regiao, anuncio_data, link, anuncio_id, coleta_data)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """.format(table)
 
         cursor.execute(query, data)
@@ -166,22 +166,28 @@ def send_postgres(data, table):
             conn.close()
 
 def parse_html(html):
-    html_element = selectolax.HTML(html)
+    parser = HTMLParser(html)
 
-    title_element = html_element.css('h2').first
-    property_price_element = html_element.css('h3.olx-text.olx-text--body-large.olx-text--block.olx-text--semibold.olx-ad-card__price').first
+    try:
 
-    title = title_element.text_content().strip() if title_element else None
-    property_price = property_price_element.text_content().strip() if property_price_element else None
+        title = parser.css_first('h2').text(strip=True) if parser.css_first('h2') else None
+        property_price = parser.css_first('h3.olx-ad-card__price').text(strip=True) if parser.css_first('h3.olx-ad-card__price') else None
 
-    location = html_element.css('div.olx-ad-card__location-date-container > p').first.text_content().strip()
-    data = html_element.css('p.olx-ad-card__date--horizontal').first.text_content().strip()
+        location = parser.css_first('div.olx-ad-card__location-date-container > p').text(strip=True) if parser.css_first('div.olx-ad-card__location-date-container > p') else None
+        data = parser.css_first('p.olx-ad-card__date--horizontal').text(strip=True) if parser.css_first('p.olx-ad-card__date--horizontal') else None
 
-    other_costs_elements = html_element.css('div.olx-ad-card__priceinfo.olx-ad-card__priceinfo--horizontal > p')
-    other_costs_values = [el.text_content().strip() for el in other_costs_elements] if other_costs_elements else []
+        other_costs_elements = parser.css('div.olx-ad-card__priceinfo.olx-ad-card__priceinfo--horizontal > p') if parser.css('div.olx-ad-card__priceinfo.olx-ad-card__priceinfo--horizontal > p') else None
+        other_costs_values = [el.text(strip=True) for el in other_costs_elements] if other_costs_elements else []
 
-    spans = html_element.css('li.olx-ad-card__labels-item > span')
-    labels_values = [span.get('aria-label', 'No Label').strip() for span in spans]
+        spans = parser.css('li.olx-ad-card__labels-item > span') if parser.css('li.olx-ad-card__labels-item > span') else None
+        labels_values = [span.attrs.get('aria-label', 'No Label').strip() for span in spans] if spans else []
+
+        link = parser.css_first('a.olx-ad-card__title-link').attrs.get('href') if parser.css_first('a.olx-ad-card__title-link') else None
+        
+        anuncio_id = (re.search(r'-(\d+)$', link)).group(1) if link else None
+
+    except Exception as e:
+        pass
 
     return {
         'title': title,
@@ -189,11 +195,53 @@ def parse_html(html):
         'location': location,
         'data': data,
         'other_costs_values': other_costs_values,
-        'labels_values': labels_values
+        'labels_values': labels_values,
+        'link': link,
+        'anuncio_id': anuncio_id
     }
 
-def main():
+def build_data(parsed_info, scraped_data_info):
+    titulo = parsed_info['title']
+    tipo = parse_property_type(scraped_data_info.url)
+    subtipo = [parse_property_subtype(scraped_data_info.url)]
+    valor = parse_property_price(parsed_info['property_price'])
+    iptu, condominio = parse_other_costs(parsed_info['other_costs_values'])
+    quartos, area, vagas_garagem, banheiros = parse_information(parsed_info['labels_values'])
+    cidade, bairro = parse_location(parsed_info['location'])
+    regiao = parse_region(scraped_data_info.url)
+    anuncio_data = parse_date(parsed_info['data'])
+    link = parsed_info['link']
+    anuncio_id = parsed_info['anuncio_id'] 
 
+    with open(SCRAPING_DATE_RECORD, 'r') as file:
+        coleta_data = file.readline().strip()
+
+    categoria = parse_category(scraped_data_info.url)
+
+    data = (
+        titulo,
+        tipo,
+        subtipo,
+        valor,
+        iptu,
+        condominio,
+        quartos,
+        area,
+        vagas_garagem,
+        banheiros,
+        cidade,
+        bairro,
+        regiao,
+        anuncio_data,
+        link, 
+        anuncio_id,
+        coleta_data
+
+    )
+
+    return data, categoria
+
+def main():
     consumer = KafkaConsumer('unparsed-data', bootstrap_servers=['kafka:29092'], api_version=(0, 10)) 
     consumer.subscribe(['unparsed-data'])  
 
@@ -209,38 +257,10 @@ def main():
 
                 parsed_info = parse_html(scraped_data_info.unparsed_html)
                 
-                if parsed_info['title'] is not None:
-                    titulo = parsed_info['title']
-                tipo = parse_property_type(scraped_data_info.url)
-                subtipo = [parse_property_subtype(scraped_data_info.url)]
-                categoria = parse_category(scraped_data_info.url)
-                if parsed_info['property_price'] is not None:
-                    valor = parse_property_price(parsed_info['property_price'])
-                iptu, condominio = parse_other_costs(parsed_info['other_costs_values'])
-                quartos, area, vagas_garagem, banheiros = parse_information(parsed_info['labels_values'])
-                cidade, bairro = parse_location(parsed_info['location'])
-                regiao = parse_region(scraped_data_info.url)
-                data = parse_date(parsed_info['data'])
-
-                data = (
-                    titulo,
-                    tipo,
-                    subtipo,
-                    valor,
-                    iptu,
-                    condominio,
-                    quartos,
-                    area,
-                    vagas_garagem,
-                    banheiros,
-                    cidade,
-                    bairro,
-                    regiao,
-                    data
-                )
+                data, categoria = build_data(parsed_info, scraped_data_info)
 
                 print(data)
-                if titulo is not None and valor is not None:
+                if data[0] is not None and data[3] is not None:
                     if categoria == "venda":
                         table = POSTGRES_VENDA_TABLE
                         send_postgres(data, table)

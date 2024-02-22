@@ -8,7 +8,7 @@ from protobufs.scraping_progress_status_pb2 import ScrapingProgressStatus
 
 NUM_OF_WORKERS = 4
 INPUT_FILE = 'olx_links.csv'
-KAFKA_CONNECTION = 'localhost:9092'
+KAFKA_CONNECTION = 'kafka:29092'
 KAFKA_SCRAPED_DATA_TOPIC = 'unparsed-data'
 KAFKA_SCRAPING_STATUS_TOPIC = 'scraping-progress'
 

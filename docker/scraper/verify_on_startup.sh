@@ -11,6 +11,6 @@ check_csv_status() {
     return 1  
 }
 
-if ([ -e "$CSV_FILE" ] && check_csv_status); then
+if ([ -e "$CSV_FILE" ] && [ ! -s "$CSV_FILE" ] && check_csv_status); then
         ./start_process.sh
     fi

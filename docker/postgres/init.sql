@@ -12,11 +12,13 @@ CREATE TABLE public.propriedades_aluguel (
 	cidade varchar(100) NULL,
 	bairro varchar(100) NULL,
 	regiao varchar(100) NULL,
-	"data" date NULL,
-	hash text NULL
+    anuncio_data text NULL,
+	anuncio_id text NULL,
+    link text null,
+    coleta_data date NULL
 );
-CREATE UNIQUE INDEX idx_aluguel_hash ON propriedades_aluguel (hash);
-CREATE INDEX idx_aluguel_data ON propriedades_aluguel (data);
+CREATE UNIQUE INDEX idx_aluguel_anuncio_id ON propriedades_aluguel (anuncio_id);
+CREATE INDEX idx_aluguel_data ON propriedades_aluguel (anuncio_data);
 CREATE INDEX idx_aluguel_valor ON propriedades_aluguel (valor);
 
 CREATE TABLE public.propriedades_venda (
@@ -33,82 +35,30 @@ CREATE TABLE public.propriedades_venda (
 	cidade varchar(100) NULL,
 	bairro varchar(100) NULL,
 	regiao varchar(100) NULL,
-	"data" date NULL,
-	hash text NULL
+    anuncio_data text NULL,
+	anuncio_id text NULL,
+    link text null,
+    coleta_data date NULL
 );
-CREATE UNIQUE INDEX idx_venda_hash ON propriedades_venda (hash);
-CREATE INDEX idx_venda_data ON propriedades_venda (data);
+CREATE UNIQUE INDEX idx_venda_anuncio_id ON propriedades_venda (anuncio_id);
+CREATE INDEX idx_venda_data ON propriedades_venda (anuncio_data);
 CREATE INDEX idx_venda_valor ON propriedades_venda (valor);
-
-
-CREATE OR REPLACE FUNCTION public.calculate_hash_aluguel(new_row propriedades_aluguel)
- RETURNS text
- LANGUAGE plpgsql
-AS $function$
-DECLARE
-    non_hash_fields text;
-BEGIN
-    non_hash_fields := COALESCE(new_row.titulo, '') || 
-                       COALESCE(new_row.tipo, '') || 
-                       COALESCE(new_row.valor::text, '') || 
-                       COALESCE(new_row.iptu::text, '') || 
-                       COALESCE(new_row.condominio::text, '') || 
-                       COALESCE(new_row.quartos::text, '') || 
-                       COALESCE(new_row.area::text, '') || 
-                       COALESCE(new_row.vagas_garagem::text, '') || 
-                       COALESCE(new_row.banheiros::text, '') || 
-                       COALESCE(new_row.cidade, '') || 
-                       COALESCE(new_row.bairro, '') || 
-                       COALESCE(new_row.regiao, '') || 
-                       COALESCE(new_row.data::text, '');
-
-    RETURN MD5(non_hash_fields);
-END;
-$function$
-;
-
-CREATE OR REPLACE FUNCTION public.calculate_hash_venda(new_row propriedades_venda)
- RETURNS text
- LANGUAGE plpgsql
-AS $function$
-DECLARE
-    non_hash_fields text;
-BEGIN
-    non_hash_fields := COALESCE(new_row.titulo, '') || 
-                       COALESCE(new_row.tipo, '') || 
-                       COALESCE(new_row.valor::text, '') || 
-                       COALESCE(new_row.iptu::text, '') || 
-                       COALESCE(new_row.condominio::text, '') || 
-                       COALESCE(new_row.quartos::text, '') || 
-                       COALESCE(new_row.area::text, '') || 
-                       COALESCE(new_row.vagas_garagem::text, '') || 
-                       COALESCE(new_row.banheiros::text, '') || 
-                       COALESCE(new_row.cidade, '') || 
-                       COALESCE(new_row.bairro, '') || 
-                       COALESCE(new_row.regiao, '') || 
-                       COALESCE(new_row.data::text, '');
-
-    RETURN MD5(non_hash_fields);
-END;
-$function$
-;
 
 CREATE OR REPLACE FUNCTION public.prevent_duplicate_entry_aluguel()
  RETURNS trigger
  LANGUAGE plpgsql
 AS $function$
 DECLARE
-    existing_hash text;
+    existing_id text;
     existing_subtipo varchar(100)[]; 
 BEGIN
-    NEW.hash := calculate_hash_aluguel(NEW);
 
-    SELECT hash, subtipo
-    INTO existing_hash, existing_subtipo
+    SELECT anuncio_id, subtipo
+    INTO existing_id, existing_subtipo
     FROM public.propriedades_aluguel
-    WHERE hash = NEW.hash;
+    WHERE anuncio_id = NEW.anuncio_id;
 
-    IF existing_hash IS NOT NULL THEN
+    IF existing_id IS NOT NULL THEN
         IF (existing_subtipo @> NEW.subtipo or 'padrão' = ANY(NEW.subtipo)) THEN
             RETURN NULL;
         ELSE
@@ -120,7 +70,7 @@ BEGIN
 
             UPDATE public.propriedades_aluguel
             SET subtipo = existing_subtipo
-            WHERE hash = existing_hash;
+            WHERE anuncio_id = existing_id;
 
             RETURN NULL;
         END IF;
@@ -136,17 +86,16 @@ CREATE OR REPLACE FUNCTION public.prevent_duplicate_entry_venda()
  LANGUAGE plpgsql
 AS $function$
 DECLARE
-    existing_hash text;
+    existing_id text;
     existing_subtipo varchar(100)[]; 
 BEGIN
-    NEW.hash := calculate_hash_venda(NEW);
 
-    SELECT hash, subtipo
-    INTO existing_hash, existing_subtipo
+    SELECT anuncio_id, subtipo
+    INTO existing_id, existing_subtipo
     FROM public.propriedades_venda
-    WHERE hash = NEW.hash;
+    WHERE anuncio_id = NEW.anuncio_id;
 
-    IF existing_hash IS NOT NULL THEN
+    IF existing_id IS NOT NULL THEN
         IF (existing_subtipo @> NEW.subtipo or 'padrão' = ANY(NEW.subtipo)) THEN
             RETURN NULL;
         ELSE
@@ -158,7 +107,7 @@ BEGIN
 
             UPDATE public.propriedades_venda
             SET subtipo = existing_subtipo
-            WHERE hash = existing_hash;
+            WHERE anuncio_id = existing_id;
 
             RETURN NULL;
         END IF;

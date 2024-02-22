@@ -1,4 +1,4 @@
 kafka-python==2.0.2
 protobuf==3.20.3
 psycopg2-binary==2.9.9
-beautifulsoup4==4.12.2
+selectolax==0.3.20

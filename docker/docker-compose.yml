@@ -1,19 +1,42 @@
 version: '3.3'
 services:
+
+  postgres:
+    image: postgres:16.1
+    restart: always
+    container_name: postgres
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=passwd
+      - POSTGRES_DB=real-estate-db
+    command: ["postgres", "-c", "config_file=/etc/postgresql.conf"]
+    volumes:
+      - ./postgres/postgres-data:/var/lib/postgresql/data
+      - ./postgres/postgresql.conf:/etc/postgresql.conf
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - kafka-network
+
   data-parser:
+    restart: always
     container_name: data-parser
     build: ./data-parser
     volumes:
       - ./data-parser:/app
+      - ./scraping-source:/app
       - ./protobufs:/app/protobufs
     depends_on:
       - kafka
+      - postgres
     environment:
       - KAFKA_SERVER=kafka:29092
     networks:
       - kafka-network
 
   scraper:
+    restart: always
     container_name: scraper
     build: ./scraper
     volumes:
@@ -22,12 +45,15 @@ services:
       - ./protobufs:/app/protobufs
     depends_on:
       - kafka
+      - data-parser
+      - scraper-status-updater
     environment:
       - KAFKA_SERVER=kafka:29092
     networks:
       - kafka-network
   
   scraper-status-updater:
+    restart: always
     container_name: scraper-status-updater
     build: ./scraper-status-updater
     volumes:
@@ -41,26 +67,9 @@ services:
     networks:
       - kafka-network
 
-  postgres:
-    image: postgres:16.1
-    restart: unless-stopped
-    container_name: postgres
-    ports:
-      - 5432:5432
-    environment:
-      - POSTGRES_USER=user
-      - POSTGRES_PASSWORD=passwd
-      - POSTGRES_DB=real-estate-db
-    command: ["postgres", "-c", "config_file=/etc/postgresql.conf"]
-    volumes:
-      - ./postgres-data:/var/lib/postgresql/data
-      - ./postgresql.conf:/etc/postgresql.conf
-    networks:
-      - kafka-network
-
   zookeeper:
     image: wurstmeister/zookeeper:latest
-    restart: unless-stopped
+    restart: always
     container_name: zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
@@ -76,7 +85,7 @@ services:
 
   kafka:
     image: wurstmeister/kafka:latest
-    restart: unless-stopped
+    restart: always
     container_name: kafka
     links:
       - zookeeper
@@ -92,33 +101,6 @@ services:
       KAFKA_CREATE_TOPICS: "unparsed-data:1:1,scraping-progress:1:1"
     depends_on:
       - zookeeper
-    networks:
-      - kafka-network
-
-  kconnect:
-    image: debezium/connect:1.9
-    restart: unless-stopped
-    container_name: kafka-connect
-    ports:
-      - 8083:8083
-    environment:
-      CONFIG_STORAGE_TOPIC: my_connect_configs
-      OFFSET_STORAGE_TOPIC: my_connect_offsets
-      STATUS_STORAGE_TOPIC: my_connect_statuses
-      BOOTSTRAP_SERVERS: kafka:29092
-      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
-      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
-      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
-      CONNECT_TOPIC_CREATION_ENABLE: "true"
-    volumes:
-      - ./config.json:/kafka/connect/config.json
-    links:
-      - zookeeper
-      - postgres
-    depends_on:
-      - kafka
-      - zookeeper
-      - postgres
     networks:
       - kafka-network
 

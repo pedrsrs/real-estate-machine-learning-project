@@ -16,12 +16,16 @@ start_time=$(date +%s)
 if [ ! -e "$CSV_FILE" ] || ([ -e "$CSV_FILE" ] && ! check_csv_status) || ([ -e "$CSV_FILE" ] && [ ! -s "$CSV_FILE" ]); then
     echo -n > olx_links.csv
     echo -n > unfiltered_links.txt
+    echo -n > scraping_start_date.txt
 
-    python3 regions.py
-    python3 link_scraper.py
+    python3 scrape_regions.py
+    python3 scrape_links.py
+
+    date=$(TZ="GMT-3" date +'%Y-%m-%d')
+    echo $date > scraping_start_date.txt
         
 while true; do
-    if check_csv_status; then
+    if ([ -e "$CSV_FILE" ] && check_csv_status); then
         python3 property_scraper.py
     else
         echo "All rows have status 'finished'. No action required."
