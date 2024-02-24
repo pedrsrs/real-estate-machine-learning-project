@@ -1,11 +1,13 @@
 FROM python:3.10.12
 
-WORKDIR /sc
+WORKDIR /scraper
 
-COPY . /sc
+COPY . /scraper
 
 RUN pip install --no-cache-dir -r requirements.txt
+RUN playwright install-deps
+RUN playwright install
 
 RUN chmod +x verify_on_startup.sh
+RUN chmod +x start_process.sh
 
-ENTRYPOINT ["/bin/bash","/sc/verify_on_startup.sh"]

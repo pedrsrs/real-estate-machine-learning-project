@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CSV_FILE="olx_links.csv"
+CSV_FILE="data/olx_links.csv"
 
 check_csv_status() {
     while IFS=, read -r url qtd status; do
@@ -14,16 +14,17 @@ check_csv_status() {
 start_time=$(date +%s)
 
 if [ ! -e "$CSV_FILE" ] || ([ -e "$CSV_FILE" ] && ! check_csv_status) || ([ -e "$CSV_FILE" ] && [ ! -s "$CSV_FILE" ]); then
-    echo -n > olx_links.csv
+    echo -n > data/olx_links.csv
     echo -n > unfiltered_links.txt
-    echo -n > scraping_start_date.txt
+    echo -n > data/scraping_start_date.txt
 
     python3 scrape_regions.py
     python3 scrape_links.py
 
     date=$(TZ="GMT-3" date +'%Y-%m-%d')
-    echo $date > scraping_start_date.txt
-        
+    echo $date > data/scraping_start_date.txt
+fi
+
 while true; do
     if ([ -e "$CSV_FILE" ] && check_csv_status); then
         python3 property_scraper.py

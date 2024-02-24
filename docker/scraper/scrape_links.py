@@ -5,7 +5,7 @@ from scrapy.crawler import CrawlerProcess
 from queue import Queue
 
 INPUT_FILE_NAME = 'unfiltered_links.txt'
-OUTPUT_FILE_NAME = 'olx_links.csv'
+OUTPUT_FILE_NAME = 'data/olx_links.csv'
 
 MIN_PRICE = 0
 MAX_PRICE = 100000000

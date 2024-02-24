@@ -1,8 +1,8 @@
 FROM python:3.10.12
 
-WORKDIR /dp
+WORKDIR /data-parser
 
-COPY * /dp
+COPY . /data-parser
 
 RUN pip install --no-cache-dir -r requirements.txt
 

@@ -6,8 +6,8 @@ from playwright.sync_api import sync_playwright
 from protobufs.unparsed_html_message_pb2 import UnparsedHtmlMessage
 from protobufs.scraping_progress_status_pb2 import ScrapingProgressStatus
 
-NUM_OF_WORKERS = 4
-INPUT_FILE = 'olx_links.csv'
+NUM_OF_WORKERS = 6
+INPUT_FILE = 'data/olx_links.csv'
 KAFKA_CONNECTION = 'kafka:29092'
 KAFKA_SCRAPED_DATA_TOPIC = 'unparsed-data'
 KAFKA_SCRAPING_STATUS_TOPIC = 'scraping-progress'

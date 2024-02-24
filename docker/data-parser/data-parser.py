@@ -11,7 +11,7 @@ POSTGRES_USER = 'user'
 POSTGRES_PASSWORD = 'passwd'
 POSTGRES_VENDA_TABLE = 'propriedades_venda'
 POSTGRES_ALUGUEL_TABLE = 'propriedades_aluguel'
-SCRAPING_DATE_RECORD = 'scraping_start_date.txt'
+SCRAPING_DATE_RECORD = 'data/scraping_start_date.txt'
 
 def parse_property_type(url):
     tipo = None

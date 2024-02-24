@@ -26,9 +26,9 @@ services:
       context: ./data-parser
       dockerfile: Dockerfile-data-parser
     volumes:
-      - ./data-parser:/dp
-      - ./scraping-source:/dp
-      - ./protobufs:/dp/protobufs
+      - ./scraping-source:/data-parser/data
+      - ./protobufs:/data-parser/protobufs
+      - ./data-parser:/data-parser
     depends_on:
       - kafka
       - postgres
@@ -38,15 +38,15 @@ services:
       - kafka-network
 
   scraper:
-    restart: always
+    restart: on-failure
     container_name: scraper
     build: 
       context: ./scraper
       dockerfile: Dockerfile-scraper
     volumes:
-      - ./scraper:/sc
-      - ./scraping-source:/sc
-      - ./protobufs:/sc/protobufs
+      - ./scraper:/scraper
+      - ./scraping-source:/scraper/data
+      - ./protobufs:/scraper/protobufs
     depends_on:
       - kafka
     environment:

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CSV_FILE="olx_links.csv"
+CSV_FILE="data/olx_links.csv"
 
 check_csv_status() {
     while IFS=, read -r url qtd status; do
