@@ -236,9 +236,7 @@ def build_data(parsed_info, scraped_data_info):
         link, 
         anuncio_id,
         coleta_data
-
     )
-
     return data, categoria
 
 def main():

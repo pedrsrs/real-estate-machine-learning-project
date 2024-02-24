@@ -1,0 +1,11 @@
+FROM python:3.10.12
+
+WORKDIR /sc
+
+COPY . /sc
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+RUN chmod +x verify_on_startup.sh
+
+ENTRYPOINT ["/bin/bash","/sc/verify_on_startup.sh"]

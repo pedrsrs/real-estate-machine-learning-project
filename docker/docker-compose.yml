@@ -22,11 +22,13 @@ services:
   data-parser:
     restart: always
     container_name: data-parser
-    build: ./data-parser
+    build: 
+      context: ./data-parser
+      dockerfile: Dockerfile-data-parser
     volumes:
-      - ./data-parser:/app
-      - ./scraping-source:/app
-      - ./protobufs:/app/protobufs
+      - ./data-parser:/dp
+      - ./scraping-source:/dp
+      - ./protobufs:/dp/protobufs
     depends_on:
       - kafka
       - postgres
@@ -38,15 +40,15 @@ services:
   scraper:
     restart: always
     container_name: scraper
-    build: ./scraper
+    build: 
+      context: ./scraper
+      dockerfile: Dockerfile-scraper
     volumes:
-      - ./scraper:/app/scraper
-      - ./scraping-source:/app
-      - ./protobufs:/app/protobufs
+      - ./scraper:/sc
+      - ./scraping-source:/sc
+      - ./protobufs:/sc/protobufs
     depends_on:
       - kafka
-      - data-parser
-      - scraper-status-updater
     environment:
       - KAFKA_SERVER=kafka:29092
     networks:
