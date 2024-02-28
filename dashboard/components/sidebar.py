@@ -11,29 +11,29 @@ def get_sidebar_layout():
                         ]),
                     
             html.Div(className="sidebar-pages-container", children=[
-                        html.A(href="google.com", className="sections-button", children=[
+                        dbc.NavLink(href="/geral", active="exact", className="sections-button", children=[
                             html.I(className="fa-solid fa-globe"),
-                            html.A("Geral", className="text-primary")
+                            html.A("Geral")
                         ]),
                         html.Div(className='line'),
-                        html.A(href="google.com", className="sections-button", children=[
+                        dbc.NavLink(href="/bairros", active="exact", className="sections-button", children=[
                             html.I(className="fa-solid fa-map-location-dot"),
-                            html.A("Bairros", className="text-primary")
+                            html.A("Bairros")
                         ]),
                         html.Div(className='line'),
-                        html.A(href="google.com", className="sections-button", children=[
+                        dbc.NavLink(href="/historico", active="exact", className="sections-button", children=[
                             html.I(className="fa-solid fa-clock-rotate-left"),
-                            html.A("Histórico", className="text-primary")
+                            html.A("Histórico")
                         ]),
                         html.Div(className='line'),
-                        html.A(href="google.com", className="sections-button", children=[
+                        dbc.NavLink(href="/previsoes", active="exact", className="sections-button", children=[
                             html.I(className="fa-solid fa-chart-line"),
-                            html.A("Previsões", className="text-primary")
+                            html.A("Previsões")
                         ]),
                         html.Div(className='line'),
-                        html.A(href="google.com", className="sections-button", children=[
+                        dbc.NavLink(href="/busca-e-exportacao", active="exact", className="sections-button", children=[
                             html.I(className="fa-regular fa-paste"),
-                            html.A("Busca e Exportação", className="text-primary")
+                            html.A("Busca e Exportação")
                         ]),
                         
                     ])
