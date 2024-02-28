@@ -3,17 +3,18 @@ body {
   font-family: arial;
 }
 .sidebar {
+    flex: 0 0 auto;
     position: fixed;
     top: 0;
     left: 0;
     bottom: 0;
-    width: 12vw;
     min-width: 210px;
     background-color: #F6F6F6;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
     align-items: center;
+    text-decoration: none;
 }
 
 .sidebar-pages-container {
@@ -44,6 +45,7 @@ body {
   font-size: 1.5rem;
   padding-left: 8%;
   text-decoration: none;
+  color: #939393;
 }
 .sections-button i{
   font-size: 180%;
@@ -72,4 +74,50 @@ body {
   margin-bottom: 15%;
 }
 
+.filter_bar {
+  background-color: #07A182;
+  height: 8vh;
+  margin: 0 auto;
+  width: 90%;
+  align-items: center; 
+  justify-content: center;
+  display: flex;
+  flex: 1;
+}
 
+.filter_bar .Select-control {
+  width: 100%;
+}
+.dropdown_container {
+  justify-content: center;
+  display: inline-block;
+  width: 12%;
+  min-width: 100px;
+  margin-right: 4%;
+}
+.Select-menu-outer {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+#file-dropdown .Select-multi-value-wrapper {
+  display: flex; 
+  overflow-x: scroll; 
+  max-width: 100px;
+
+}
+
+#file-dropdown .Select-value {
+  flex: 0 0 150px; 
+  display: flex; 
+  flex-direction: row;
+  max-height: 40px;
+  overflow-y: hidden;
+}
+
+#file-dropdown {
+  margin: 20px;
+  padding: 20px;
+  width:100%;
+  max-width: 550px;
+}
