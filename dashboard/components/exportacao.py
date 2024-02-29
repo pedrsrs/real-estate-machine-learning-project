@@ -7,4 +7,4 @@ import pandas as pd
 import psycopg2
 
 layout = dbc.Col([
-                ])
+                ], style={"backgroun-color": "red"})
