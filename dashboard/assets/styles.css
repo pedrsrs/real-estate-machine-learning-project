@@ -4,7 +4,7 @@ body {
 }
 .sidebar {
     flex: 0 0 auto;
-    width: 100%;
+    width: 14vw;
     height: 100vh;
     min-width: 210px;
     background-color: #F6F6F6;
@@ -13,6 +13,9 @@ body {
     flex-direction: column;
     align-items: center;
     text-decoration: none;
+    top: 0;
+    left: 0;
+    position:fixed;
 }
 
 .sidebar-pages-container {
@@ -23,6 +26,7 @@ body {
     display: flex;
     flex-direction: column;
     align-items: left;
+ 
 }
 
 .sections-button {
@@ -144,20 +148,41 @@ body {
 }
 .stat-value {
   text-align: center;
-  font-size: 3rem;
+  font-size: 2.5vw;
   color: #07A182;
 }
 
+.test{
+  margin: 0 auto;
+  width: 100%;
+  align-items: center; 
+  justify-content: center;
+  display: flex;
+  flex: 1;
+  
+}
 .orderby-bar {
-
   display: flex;
   flex: 1;
   background-color: #F6F6F6;
   height: 8vh;
   width:100%;
+  justify-content: center;
+  align-items: center; 
+  margin: 0;
+  line-height: -100px;
 }
 
 #orderby-dropdown {
   width: 10vw;
-  height: 80px;
 }
+
+.graph-bar {
+  margin-top: 20px;
+  display: flex;
+  flex: 1;
+  background-color: #F6F6F6;
+  height: 35vh;
+  width:100%;
+}
+

@@ -24,7 +24,7 @@ def main() -> None:
     app.layout = dbc.Container(children=[
         html.Div(style={"display": "flex"}, children=[
             dcc.Location(id='url'),
-            html.Div(style={"flex": "0 0 auto", "width": "13vw"}, children=[
+            html.Div(style={"flex": "0 0 auto", "width": "14vw"}, children=[
                 sidebar.sidebar
             ]),
             html.Div(style={"flex": "1"}, children=[

@@ -33,17 +33,39 @@ layout = dbc.Col([
             ])
         ]),
     ], className="stats"),
+        dbc.Row([
+            dbc.Col(md=12, children=[
+                html.Div(className="orderby-bar", children=[
+                        dcc.Dropdown(
+                            options=[{"label": tipo, "value": tipo} for tipo in all_tipos],
+                            placeholder="Tipo",
+                            id="orderby-dropdown"
+                        ),
+                ])
+            ])
+        ]),
     dbc.Row([
-        dbc.Col(md=12, children=[
-            html.Div(className="orderby-bar", children=[
-                html.Div(children=[
-                    dcc.Dropdown(
-                        options=[{"label": tipo, "value": tipo} for tipo in all_tipos],
-                        placeholder="Tipo",
-                        id="orderby-dropdown"
-                    ),
-                ]),
+        dbc.Col(md=8, children=[
+            html.Div(className="graph-bar", children=[
+
+            ])
+        ]),
+        dbc.Col(md=4, children=[
+            html.Div(className="graph-bar", children=[
+
             ])
         ])
+    ]),
+    dbc.Row([
+        dbc.Col(md=6, children=[
+            html.Div(className="graph-bar", children=[
+
+            ])
+        ]),
+        dbc.Col(md=6, children=[
+            html.Div(className="graph-bar", children=[
+
+            ])
         ])
-    ])
+    ]),
+])
