@@ -5,6 +5,38 @@ import dash_bootstrap_components as dbc
 import numpy as np
 import pandas as pd
 import psycopg2
+
+conn = psycopg2.connect(
+    dbname="real-estate-db",
+    user="user",
+    password="passwd",
+    host="localhost",
+    port="5432"
+)
+
+sql_query = """
+SELECT 
+    bairro,
+    COUNT(bairro) AS contagem
+FROM 
+    propriedades_venda pv
+GROUP BY 
+    bairro
+ORDER BY 
+    contagem DESC
+LIMIT 15;
+"""
+
+sql_query2 = """
+SELECT regiao, 
+       COUNT(*) * 100.0 / (SELECT COUNT(*) FROM propriedades_venda) AS percentage
+FROM propriedades_venda pv 
+GROUP BY regiao;
+"""
+df = pd.read_sql_query(sql_query, conn)
+df2 = pd.read_sql_query(sql_query2, conn)
+conn.close()
+
 all_tipos = ["tipo1", "tipo2", "tipo3"]
 layout = dbc.Col([
     dbc.Row([
@@ -46,13 +78,32 @@ layout = dbc.Col([
         ]),
     dbc.Row([
         dbc.Col(md=8, children=[
-            html.Div(className="graph-bar", children=[
-
+            html.Div(className="graph-bar", style={"justify-content":"center"}, children=[
+                    dcc.Graph(
+                        style={"width":"90%", "height":"90%"},
+                        id='bar-chart',
+                        figure={
+                            'data': [
+                                {'x': df["bairro"], 'y': df["contagem"], 'type': 'bar', 'name': 'Bar Chart'}
+                            ],
+                            'layout': {
+                                'xaxis': {'title': 'Categories'},
+                                'yaxis': {'title': 'Values'},
+                                'plot_bgcolor': 'rgba(0, 0, 0, 0)', 
+                                'paper_bgcolor': 'rgba(0, 0, 0, 0)', 
+                            }
+                        }
+                    )
             ])
         ]),
         dbc.Col(md=4, children=[
             html.Div(className="graph-bar", children=[
-
+                html.Div([
+                dcc.Graph(
+                    id='pie-chart',
+                    figure=px.pie(df2, values='percentage', names='regiao', title='Neighborhood Distribution')
+                )
+            ])
             ])
         ])
     ]),
@@ -69,3 +120,5 @@ layout = dbc.Col([
         ])
     ]),
 ])
+
+
