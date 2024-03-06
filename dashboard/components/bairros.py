@@ -5,6 +5,7 @@ import dash_bootstrap_components as dbc
 import numpy as np
 import pandas as pd
 import psycopg2
+from ..queries import *
 
 conn = psycopg2.connect(
     dbname="real-estate-db",
@@ -14,27 +15,12 @@ conn = psycopg2.connect(
     port="5432"
 )
 
-sql_query = """
-SELECT 
-    bairro,
-    COUNT(bairro) AS contagem
-FROM 
-    propriedades_venda pv
-GROUP BY 
-    bairro
-ORDER BY 
-    contagem DESC
-LIMIT 15;
-"""
+df = bairros_contagem()
+df2 = regions_percentage()
+median_property_price = get_median("valor")
+median_area = get_median("area")
+count = get_count()
 
-sql_query2 = """
-SELECT regiao, 
-       COUNT(*) * 100.0 / (SELECT COUNT(*) FROM propriedades_venda) AS percentage
-FROM propriedades_venda pv 
-GROUP BY regiao;
-"""
-df = pd.read_sql_query(sql_query, conn)
-df2 = pd.read_sql_query(sql_query2, conn)
 conn.close()
 
 all_tipos = ["tipo1", "tipo2", "tipo3"]
@@ -49,19 +35,19 @@ layout = dbc.Col([
         dbc.Col(md=3, children=[
             html.Div(className="stat-cards", children=[
                 html.A("Valor Mediano:", className="stat-description"),
-                html.P("R$350.000,00", className="stat-value")
+                html.P("R$"+str(median_property_price), className="stat-value")
             ])
         ]),
         dbc.Col(md=3, children=[
             html.Div(className="stat-cards", children=[
                 html.A("Área Mediana:", className="stat-description"),
-                html.P("110m²", className="stat-value")
+                html.P(str(median_area)+"m²", className="stat-value")
             ])
         ]),
         dbc.Col(md=3, children=[
             html.Div(className="stat-cards", children=[
                 html.A("Quantidade de Anúncios:", className="stat-description"),
-                html.P("4.321", className="stat-value")
+                html.P(count, className="stat-value")
             ])
         ]),
     ], className="stats"),
@@ -101,7 +87,7 @@ layout = dbc.Col([
                 html.Div([
                 dcc.Graph(
                     id='pie-chart',
-                    figure=px.pie(df2, values='percentage', names='regiao', title='Neighborhood Distribution')
+                    figure=px.pie(df2, values='percentage', names='regiao', title='Neighborhood Distribution'),
                 )
             ])
             ])
@@ -120,5 +106,6 @@ layout = dbc.Col([
         ])
     ]),
 ])
+
 
 
