@@ -6,6 +6,8 @@ import pandas as pd
 from dash import html, dcc
 import psycopg2
 from queries import *
+from components.bairros import *
+from dash import Dash, dash_table, dcc, html, Input, Output, callback
 
 def register_callbacks(app):
     @app.callback(Output('page-content', 'children'), [Input('url', 'pathname')])
@@ -14,7 +16,18 @@ def register_callbacks(app):
             return bairros.layout
         if pathname == '/busca-e-exportacao':
             return exportacao.layout
-
+    @app.callback(
+    Output('datatable-interactivity', 'style_data_conditional'),
+    Input('datatable-interactivity', 'selected_columns')
+    )
+    def update_styles(selected_columns):
+        if selected_columns is None:
+            return []
+        else:
+            return [{
+                'if': {'column_id': i},
+                'background_color': '#D2F3FF'
+            } for i in selected_columns]
     @app.callback(
         Output('datatable-row-ids-container', 'children'),
         [Input('datatable-row-ids', 'derived_virtual_row_ids'),
@@ -22,7 +35,7 @@ def register_callbacks(app):
          Input('datatable-row-ids', 'active_cell')]
     )
     def update_graphs(rows, derived_virtual_selected_rows, active_cell):
-        df = count_bairros()
+        df = bairros_contagem()
     
         if derived_virtual_selected_rows is None:
             derived_virtual_selected_rows = []
@@ -56,5 +69,11 @@ def register_callbacks(app):
                 },
             )
 
-            for column in ["contagem"] if column in dff
+            for column in ['contagem', 'median_value', 'median_area'] if column in dff
         ]
+    @app.callback(
+        Output('dd-output-container', 'children'),
+        Input('file-dropdown-regiao', 'regiao')
+    )
+    def update_output(regiao):
+        initialize_dfs(regiao)

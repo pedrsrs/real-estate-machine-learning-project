@@ -12,24 +12,21 @@ conn = psycopg2.connect(
     )
 cursor = conn.cursor()
 
-def count_bairros():
-    sql_query = """
-        SELECT 
-            bairro,
-            COUNT(bairro) AS contagem
-        FROM 
-            propriedades_venda pv
-        GROUP BY 
-            bairro
-        ORDER BY 
-            contagem DESC
-        LIMIT 15;
-    """
-    df = pd.read_sql_query(sql_query, conn)
-    conn.close()
-    return df
+def unique(param, regiao):
+    if regiao is None:
+        sql_query = """
+        SELECT distinct {} from propriedades_venda 
+        """.format(param)
+    else:
+        sql_query = """
+        SELECT distinct {} from propriedades_venda where regiao ilike '{}'
+        """.format(param, regiao)
+    cursor.execute(sql_query)
+    elements = cursor.fetchall()
 
-def bairros_contagem():
+    return elements
+
+def bairros_contagem(regiao):
     sql_query = """
     SELECT 
         bairro,
@@ -47,7 +44,7 @@ def bairros_contagem():
 
     return df
 
-def regions_percentage():
+def regions_percentage(regiao):
     sql_query = """
     SELECT regiao, 
         ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM propriedades_venda), 2)::numeric AS percentage
@@ -58,36 +55,20 @@ def regions_percentage():
 
     return df
 
-def bairros_contagem():
+def bairro_metro_quadrado(regiao):
     sql_query = """
     SELECT 
-        bairro,
-        COUNT(bairro) AS contagem
-    FROM 
-        propriedades_venda pv
-    GROUP BY 
+        sum(area)/sum(valor)
+    from
+        propriedades_valor
+    group by
         bairro
-    ORDER BY 
-        contagem DESC
-    LIMIT 15;
     """
     df = pd.read_sql_query(sql_query, conn)
 
     return df
 
-def avg_price():
-    sql_query = """
-    SELECT 
-    PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY valor) AS median_value
-    FROM 
-    propriedades_venda;
-    """
-    cursor.execute(sql_query)
-    rounded_value = cursor.fetchone()[0]  
-    cursor.close()
-    return rounded_value
-
-def get_median(element):
+def get_median(element, regiao):
     sql_query = """
     SELECT 
     PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY {}) AS median_value
@@ -97,10 +78,20 @@ def get_median(element):
 
     cursor.execute(sql_query)
     rounded_value = cursor.fetchone()[0]  
-    cursor.close()
     return rounded_value
 
-def get_count():
+def valor_metro_quadrado(regiao):
+    sql_query = """
+    SELECT 
+        ROUND(CAST(sum(valor)/sum(area) AS numeric),2)  as result
+    from
+        propriedades_venda
+    """
+    cursor.execute(sql_query)
+    count = cursor.fetchone()[0]  
+    return count
+
+def get_count(regiao):
     sql_query = """
     SELECT 
     count(valor)
@@ -110,5 +101,4 @@ def get_count():
 
     cursor.execute(sql_query)
     count = cursor.fetchone()[0]  
-    cursor.close()
     return count

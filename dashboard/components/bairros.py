@@ -5,7 +5,7 @@ import dash_bootstrap_components as dbc
 import numpy as np
 import pandas as pd
 import psycopg2
-from ..queries import *
+from queries import *
 
 conn = psycopg2.connect(
     dbname="real-estate-db",
@@ -14,14 +14,19 @@ conn = psycopg2.connect(
     host="localhost",
     port="5432"
 )
+regiao=None
 
-df = bairros_contagem()
-df2 = regions_percentage()
-median_property_price = get_median("valor")
-median_area = get_median("area")
-count = get_count()
+def initialize_dfs(regiao):
+    df = bairros_contagem(regiao)
+    df2 = regions_percentage(regiao)
+    median_property_price = get_median("valor", regiao)
+    median_area = get_median("area", regiao)
+    count = get_count(regiao)
+    metro_quadrado = valor_metro_quadrado(regiao)
 
-conn.close()
+    return df, df2, median_property_price, median_area, count, metro_quadrado
+
+df, df2, median_property_price, median_area, count, metro_quadrado = initialize_dfs(regiao)
 
 all_tipos = ["tipo1", "tipo2", "tipo3"]
 layout = dbc.Col([
@@ -29,7 +34,7 @@ layout = dbc.Col([
         dbc.Col(md=3, children=[
             html.Div(className="stat-cards", children=[
                 html.A("Valor do Metro Quadrado:", className="stat-description"),
-                html.P("R$1.234,00", className="stat-value")
+                html.P("R$"+str(metro_quadrado), className="stat-value")
             ])
         ]),
         dbc.Col(md=3, children=[
@@ -106,6 +111,9 @@ layout = dbc.Col([
         ])
     ]),
 ])
+
+conn.close()
+
 
 
 
