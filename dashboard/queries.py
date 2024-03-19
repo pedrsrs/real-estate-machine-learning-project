@@ -12,21 +12,28 @@ conn = psycopg2.connect(
     )
 cursor = conn.cursor()
 
-def unique(param, regiao):
-    if regiao is None:
-        sql_query = """
-        SELECT distinct {} from propriedades_venda 
-        """.format(param)
-    else:
-        sql_query = """
-        SELECT distinct {} from propriedades_venda where regiao ilike '{}'
-        """.format(param, regiao)
+def all_data():
+    sql_query = """
+    SELECT * from propriedades_venda
+    """
+    df = pd.read_sql_query(sql_query, conn)
+
+    return df
+
+def unique(param):
+    sql_query = """
+    SELECT distinct {} from propriedades_venda
+    """.format(param)
     cursor.execute(sql_query)
     elements = cursor.fetchall()
 
-    return elements
+    elements_list = []
+    for element in elements:
+        elements_list.append((''.join(element)).title())
 
-def bairros_contagem(regiao):
+    return elements_list
+
+def bairros_contagem():
     sql_query = """
     SELECT 
         bairro,
@@ -44,7 +51,7 @@ def bairros_contagem(regiao):
 
     return df
 
-def regions_percentage(regiao):
+def regions_percentage():
     sql_query = """
     SELECT regiao, 
         ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM propriedades_venda), 2)::numeric AS percentage
@@ -55,20 +62,23 @@ def regions_percentage(regiao):
 
     return df
 
-def bairro_metro_quadrado(regiao):
+def bairro_metro_quadrado():
     sql_query = """
-    SELECT 
+    SELECT 	
+		bairro,
+		regiao,
+		cidade,
         sum(area)/sum(valor)
     from
-        propriedades_valor
+        propriedades_venda
     group by
-        bairro
+        bairro, regiao, cidade
     """
     df = pd.read_sql_query(sql_query, conn)
 
     return df
 
-def get_median(element, regiao):
+def get_median(element):
     sql_query = """
     SELECT 
     PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY {}) AS median_value
@@ -80,18 +90,25 @@ def get_median(element, regiao):
     rounded_value = cursor.fetchone()[0]  
     return rounded_value
 
-def valor_metro_quadrado(regiao):
+def valor_metro_quadrado():
     sql_query = """
     SELECT 
-        ROUND(CAST(sum(valor)/sum(area) AS numeric),2)  as result
+        cidade,
+        regiao,
+        bairro,
+        ROUND(CAST(sum(valor)/sum(area) AS numeric),2) as valor
     from
         propriedades_venda
+    where 
+        valor is not null and area is not null
+    group by
+        cidade, bairro, regiao
     """
-    cursor.execute(sql_query)
-    count = cursor.fetchone()[0]  
-    return count
+    df = pd.read_sql_query(sql_query, conn) 
 
-def get_count(regiao):
+    return df
+
+def get_count():
     sql_query = """
     SELECT 
     count(valor)

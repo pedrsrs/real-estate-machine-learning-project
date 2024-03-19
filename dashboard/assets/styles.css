@@ -92,6 +92,7 @@ body {
   width: 100%;
 }
 .dropdown_container {
+  padding: 0;
   justify-content: center;
   display: inline-block;
   width: 12%;
@@ -103,14 +104,16 @@ body {
   overflow-y: auto;
 }
 
-#file-dropdown .Select-multi-value-wrapper {
+.custom-dropdown .Select-multi-value-wrapper {
+  padding: 0;
   display: flex; 
   overflow-x: scroll; 
   max-width: 100px;
 
 }
 
-#file-dropdown .Select-value {
+.custom-dropdown  .Select-value {
+  padding: 0;
   flex: 0 0 150px; 
   display: flex; 
   flex-direction: row;
@@ -118,7 +121,8 @@ body {
   overflow-y: hidden;
 }
 
-#file-dropdown {
+.custom-dropdown  {
+  padding: 0;
   margin: 20px;
   padding: 20px;
   width:100%;
@@ -186,3 +190,6 @@ body {
   width:100%;
 }
 
+.DateInput_input, .DateInput_input_1 {
+  Height: 34px;
+}

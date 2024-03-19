@@ -1,9 +1,11 @@
 import dash
-from dash import html, dcc
+from dash import Dash, html, dcc
 import dash_bootstrap_components as dbc
 import dash_daq as daq
 
-sidebar = dbc.Col([
+def sidebar_layout(app: Dash) -> html.Div:
+        
+    return dbc.Col([
     html.Div(className="sidebar", children=[
         html.Div(className='stateButton', id="estado",
                 children=[html.H1("Venda", className="botao"),
@@ -36,5 +38,5 @@ sidebar = dbc.Col([
                     ]),
                     
                 ])
-    ])
-])
+            ])
+        ])
