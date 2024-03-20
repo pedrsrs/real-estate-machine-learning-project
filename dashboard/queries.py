@@ -36,6 +36,7 @@ def unique(param):
 def bairros_contagem():
     sql_query = """
     SELECT 
+		cidade,
         bairro,
         COUNT(bairro) AS contagem,
         PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY valor) AS median_value,
@@ -43,7 +44,7 @@ def bairros_contagem():
     FROM 
         propriedades_venda pv
     GROUP BY 
-        bairro
+        bairro, cidade
     ORDER BY 
         contagem DESC
     """
@@ -68,7 +69,7 @@ def bairro_metro_quadrado():
 		bairro,
 		regiao,
 		cidade,
-        sum(area)/sum(valor)
+        sum(valor)/sum(area) as contagem
     from
         propriedades_venda
     group by

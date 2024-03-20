@@ -2,6 +2,7 @@
 from dash import html, dcc
 import dash_bootstrap_components as dbc
 from components import sidebar, filters
+from queries import *
 
 def render_layout(app):
     content = html.Div(id="page-content")
@@ -21,3 +22,5 @@ def render_layout(app):
             ])
         ])
     ], fluid=True, style={"padding": "0px"}, className="dbc")
+
+

@@ -1,8 +1,10 @@
 # app.py
+
 import dash
 import dash_bootstrap_components as dbc
-from layouts import render_layout
+
 from callbacks import register_callbacks
+from layouts import render_layout
 
 external_stylesheets = ['assets/styles.css']
 

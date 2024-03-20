@@ -59,7 +59,9 @@ def bairros_layout(app):
         ]),
         dbc.Row([
             dbc.Col(md=8, children=[
-                barchart(app)
+                html.Div(className="graph-bar", children=[
+                    barchart(app)
+                ])
             ]),
             dbc.Col(md=4, children=[
                 html.Div(className="graph-bar", children=[
