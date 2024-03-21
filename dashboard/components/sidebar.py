@@ -1,7 +1,5 @@
-import dash
-from dash import Dash, html, dcc
+from dash import Dash, html
 import dash_bootstrap_components as dbc
-import dash_daq as daq
 
 def sidebar_layout(app: Dash) -> html.Div:
         

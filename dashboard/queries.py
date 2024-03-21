@@ -1,5 +1,3 @@
-# db_queries.py
-
 import pandas as pd
 import psycopg2
 

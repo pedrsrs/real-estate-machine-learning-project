@@ -1,24 +1,21 @@
-import dash
-from dash import Dash, html, dcc
+from dash import html, dcc
 import dash_bootstrap_components as dbc
-from dash.dependencies import Input, Output
-import dash_daq as daq
 from queries import *
+import ids
 
-def filters_layout(app: Dash) -> html.Div:
-    all_regioes = unique('regiao')
-    all_bairros = unique('bairro')
-    all_tipos = unique('tipo')
-    all_cidades = unique('cidade')
-
-    return dbc.Col([
+all_regioes = unique('regiao')
+all_bairros = unique('bairro')
+all_tipos = unique('tipo')
+all_cidades = unique('cidade')
+    
+filter_layout = dbc.Col([
         html.Div(className="filter_bar", children=[
             html.Div(className="dropdown_container", children=[
                 dcc.Dropdown(
                     options=[{"label": tipo, "value": tipo} for tipo in all_tipos],
                     placeholder="Tipo",
                     multi=True,
-                    id="tipo_dropdown",
+                    id=ids.DROPDOWN_TIPO,
                     className='custom-dropdown'
                 ),
             ]),
@@ -27,7 +24,7 @@ def filters_layout(app: Dash) -> html.Div:
                     options=[{"label": regiao, "value": regiao} for regiao in all_regioes],
                     placeholder="Região",
                     multi=True,
-                    id="regiao_dropdown",
+                    id=ids.DROPDOWN_REGIAO,
                     className='custom-dropdown'
                 ),
             ]),
@@ -36,7 +33,7 @@ def filters_layout(app: Dash) -> html.Div:
                     options=[{"label": cidade, "value":cidade} for cidade in all_cidades],
                     placeholder="Cidade",
                     multi=True,
-                    id="cidade_dropdown",
+                    id=ids.DROPDOWN_CIDADE,
                     className='custom-dropdown'
                 ),
             ]),
@@ -45,7 +42,7 @@ def filters_layout(app: Dash) -> html.Div:
                     options=[{"label": bairro, "value": bairro} for bairro in all_bairros],
                     placeholder="Bairro",
                     multi=True,
-                    id="bairro-dropdown",
+                    id=ids.DROPDOWN_BAIRRO,
                     className='custom-dropdown'
                 ),
             ]),

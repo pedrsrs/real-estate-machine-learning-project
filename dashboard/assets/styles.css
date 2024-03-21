@@ -1,195 +1,197 @@
 body {
-  background-color: #DDDDDD;
-  font-family: arial;
-}
-.sidebar {
-    flex: 0 0 auto;
-    width: 14vw;
-    height: 100vh;
-    min-width: 210px;
-    background-color: #F6F6F6;
-    overflow-y: auto;
+    background-color: #DDDDDD;
+    font-family: arial;
+  }
+  .sidebar {
+      flex: 0 0 auto;
+      width: 14vw;
+      height: 100vh;
+      min-width: 210px;
+      background-color: #F6F6F6;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-decoration: none;
+      top: 0;
+      left: 0;
+      position:fixed;
+  }
+  
+  .sidebar-pages-container {
+      width: 80%;
+      color: #939393;
+      margin-top: 4vh;
+      font-size: 75%;
+      display: flex;
+      flex-direction: column;
+      align-items: left;
+   
+  }
+  
+  .sections-button {
     display: flex;
-    flex-direction: column;
     align-items: center;
+    margin-left: 5%; 
     text-decoration: none;
+    color: #939393;
+    transition: color 0.3s ease;
+  }
+  .sections-button:hover {
+    color: #07A182;
+  }
+  .sections-button.active {  
+    color: #07A182;
+  }
+  .sections-button a{
+    font-size: 23px;
+    padding-left: 8%;
+    text-decoration: none;
+    color: #939393;
+  }
+  .sections-button i{
+    font-size: 180%;
+  }
+  
+  .stateButton {
+    height: 19vh;
+    width: auto;
+    min-height: 60px;
+    background-color: #07A182;
+    color: #F6F6F6;
+    margin-top: 30px;
+    text-align: center;
+    width: 80%;
+    height: 5vh;
+    display: flex; 
+    align-items: center; 
+    justify-content: center;
+  }
+  .line {
+    border-top: 1px solid #939393;
+    top: 50%;
+    left: 0;
+    right: 0;
+    margin-top: 15%;
+    margin-bottom: 15%;
+  }
+  
+  .filter_bar {
+    background-color: #07A182;
+    height: 8vh;
+    min-height: 80px;
+    margin: 0 auto;
+    width: 100%;
+    align-items: center; 
+    justify-content: center;
+    display: flex;
+    flex: 1;
+  }
+  
+  .filter_bar .Select-control {
+    width: 100%;
+  }
+  .dropdown_container {
+    padding: 0;
+    justify-content: center;
+    display: inline-block;
+    width: 12%;
+    min-width: 100px;
+    margin-right: 4%;
+  }
+  .Select-menu-outer {
+    max-height: 300px;
+    overflow-y: auto;
+  }
+  
+  .custom-dropdown .Select-multi-value-wrapper {
+    padding: 0;
+    display: flex; 
+    overflow-x: scroll; 
+    max-width: 100px;
+  
+  }
+  
+  .custom-dropdown  .Select-value {
+    padding: 0;
+    flex: 0 0 150px; 
+    display: flex; 
+    flex-direction: row;
+    max-height: 40px;
+    overflow-y: hidden;
+  }
+  
+  .custom-dropdown  {
+    padding: 0;
+    margin: 20px;
+    padding: 20px;
+    width:100%;
+    max-width: 550px;
+  }
+  
+  .stats {
+    margin-top: 20px;
+    margin-bottom: 20px;
+    height: 12vh;
+    min-height: 130px;
+  }
+  .stat-cards {
+    background-color: #F6F6F6;
+    height: 100%;
+    width: 100%;
+  
+  }
+  .stat-description {
     top: 0;
     left: 0;
-    position:fixed;
-}
-
-.sidebar-pages-container {
-    width: 80%;
+    font-size: 1.2rem;
     color: #939393;
-    margin-top: 4vh;
-    font-size: 75%;
-    display: flex;
-    flex-direction: column;
-    align-items: left;
- 
-}
-
-.sections-button {
-  display: flex;
-  align-items: center;
-  margin-left: 5%; 
-  text-decoration: none;
-  color: #939393;
-  transition: color 0.3s ease;
-}
-.sections-button:hover {
-  color: #07A182;
-}
-.sections-button.active {  
-  color: #07A182;
-}
-.sections-button a{
-  font-size: 23px;
-  padding-left: 8%;
-  text-decoration: none;
-  color: #939393;
-}
-.sections-button i{
-  font-size: 180%;
-}
-
-.stateButton {
-  height: 19vh;
-  width: auto;
-  min-height: 60px;
-  background-color: #07A182;
-  color: #F6F6F6;
-  margin-top: 30px;
-  text-align: center;
-  width: 80%;
-  height: 5vh;
-  display: flex; 
-  align-items: center; 
-  justify-content: center;
-}
-.line {
-  border-top: 1px solid #939393;
-  top: 50%;
-  left: 0;
-  right: 0;
-  margin-top: 15%;
-  margin-bottom: 15%;
-}
-
-.filter_bar {
-  background-color: #07A182;
-  height: 8vh;
-  min-height: 80px;
-  margin: 0 auto;
-  width: 100%;
-  align-items: center; 
-  justify-content: center;
-  display: flex;
-  flex: 1;
-}
-
-.filter_bar .Select-control {
-  width: 100%;
-}
-.dropdown_container {
-  padding: 0;
-  justify-content: center;
-  display: inline-block;
-  width: 12%;
-  min-width: 100px;
-  margin-right: 4%;
-}
-.Select-menu-outer {
-  max-height: 300px;
-  overflow-y: auto;
-}
-
-.custom-dropdown .Select-multi-value-wrapper {
-  padding: 0;
-  display: flex; 
-  overflow-x: scroll; 
-  max-width: 100px;
-
-}
-
-.custom-dropdown  .Select-value {
-  padding: 0;
-  flex: 0 0 150px; 
-  display: flex; 
-  flex-direction: row;
-  max-height: 40px;
-  overflow-y: hidden;
-}
-
-.custom-dropdown  {
-  padding: 0;
-  margin: 20px;
-  padding: 20px;
-  width:100%;
-  max-width: 550px;
-}
-
-.stats {
-  margin-top: 20px;
-  margin-bottom: 20px;
-  height: 12vh;
-  min-height: 130px;
-}
-.stat-cards {
-  background-color: #F6F6F6;
-  height: 100%;
-  width: 100%;
-
-}
-.stat-description {
-  top: 0;
-  left: 0;
-  font-size: 1.2rem;
-  color: #939393;
-  padding-top: 10px;
-  padding-left: 15px;
-  text-decoration: none;
-}
-.stat-value {
-  text-align: center;
-  font-size: 2.5vw;
-  color: #07A182;
-}
-
-.test{
-  margin: 0 auto;
-  width: 100%;
-  align-items: center; 
-  justify-content: center;
-  display: flex;
-  flex: 1;
+    padding-top: 10px;
+    padding-left: 15px;
+    text-decoration: none;
+  }
+  .stat-value {
+    text-align: center;
+    font-size: 2.5vw;
+    color: #07A182;
+  }
   
-}
-.orderby-bar {
-  display: flex;
-  flex: 1;
-  background-color: #F6F6F6;
-  height: 8vh;
-  width:100%;
-  justify-content: center;
-  align-items: center; 
-  margin: 0;
-  line-height: -100px;
-}
-
-#orderby-dropdown {
-  width: 10vw;
-}
-
-.graph-bar {
-  margin-top: 20px;
-  display: flex;
-  flex: 1;
-  background-color: #F6F6F6;
-  height: 35vh;
-  width:100%;
-}
-
-.DateInput_input, .DateInput_input_1 {
-  Height: 34px;
-}
+  .test{
+    margin: 0 auto;
+    width: 100%;
+    align-items: center; 
+    justify-content: center;
+    display: flex;
+    flex: 1;
+    
+  }
+  .orderby-bar {
+    display: flex;
+    flex: 1;
+    background-color: #F6F6F6;
+    height: 8vh;
+    width:100%;
+    justify-content: center;
+    align-items: center; 
+    margin: 0;
+    line-height: -100px;
+  }
+  
+  #orderby-dropdown {
+    width: 10vw;
+  }
+  
+  .graph-bar {
+    margin-top: 20px;
+    display: flex;
+    flex: 1;
+    background-color: #F6F6F6;
+    height: 35vh;
+    width:100%;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .DateInput_input, .DateInput_input_1 {
+    Height: 34px;
+  }

@@ -1,25 +1,22 @@
-# Import necessary libraries
 import plotly.express as px
 from dash import html, dcc
 import dash_bootstrap_components as dbc
-from dash.dependencies import Input, Output
 from queries import *
 from components.metrics import *
 from components.graphs import *
+import ids 
+import plotly.graph_objects as go
 
 all_tipos = ["Anúncios", "Área", "Valor"]
 
-df = bairros_contagem()
 df2 = regions_percentage()
 median_property_price = get_median("valor")
 median_area = get_median("area")
 count = get_count()
 metro_quadrado = valor_metro_quadrado()
-
-def bairros_layout(app):
-            
-    metros_quadrados = render_sqr_meters(app, metro_quadrado)
-    return dbc.Col([
+    
+metros_quadrados = calculate_sqr_meters(metro_quadrado)
+bairro_layout = dbc.Col([
         dbc.Row([
             dbc.Col(md=3, children=[
                 html.Div(className="stat-cards", id='metric_metro_quadrado', children=[
@@ -59,20 +56,29 @@ def bairros_layout(app):
         ]),
         dbc.Row([
             dbc.Col(md=8, children=[
-                html.Div(className="graph-bar", children=[
-                    barchart(app)
+                html.Div(className="graph-bar", id=ids.BAR_CHART_BAIRROS, children=[
+                    bar_chart 
                 ])
             ]),
-            dbc.Col(md=4, children=[
+             dbc.Col(
+            md=4,  # Set the column width for medium screens and larger
+            children=[
                 html.Div(className="graph-bar", children=[
-                    html.Div([
-                        dcc.Graph(
-                            id='pie-chart',
-                            figure=px.pie(df2, values='percentage', names='regiao', title='Neighborhood Distribution'),
-                        )
-                    ])
+                    dcc.Graph(
+                        id='pie-chart',
+                        figure=px.pie(
+                            df2,
+                            values='percentage',
+                            names='regiao',
+                            title='Distribuição por Região',
+                            hole=0.6,  
+                            opacity=1  
+                        ),
+                        style={'width': '100%', 'height': '100%'}
+                    )
                 ])
-            ])
+            ]
+        )
         ]),
         dbc.Row([
             dbc.Col(md=6, children=[
@@ -87,3 +93,4 @@ def bairros_layout(app):
             ])
         ]),
     ])
+
