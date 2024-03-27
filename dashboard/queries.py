@@ -12,7 +12,8 @@ cursor = conn.cursor()
 
 def all_data():
     sql_query = """
-    SELECT * from propriedades_venda
+    SELECT 
+	cidade, bairro, regiao, valor, area, tipo, anuncio_data from propriedades_venda pv 
     """
     df = pd.read_sql_query(sql_query, conn)
 
@@ -52,10 +53,11 @@ def bairros_contagem():
 
 def regions_percentage():
     sql_query = """
-    SELECT regiao, 
+    SELECT regiao,
+        bairro,
         ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM propriedades_venda), 2)::numeric AS percentage
     FROM propriedades_venda pv 
-    GROUP BY regiao;
+    GROUP BY regiao, bairro;
     """
     df = pd.read_sql_query(sql_query, conn)
 
@@ -110,11 +112,11 @@ def valor_metro_quadrado():
 def get_count():
     sql_query = """
     SELECT 
-    count(valor)
+    valor, bairro, regiao, cidade, anuncio_data, tipo
     FROM 
     propriedades_venda;
     """
 
-    cursor.execute(sql_query)
-    count = cursor.fetchone()[0]  
-    return count
+    df = pd.read_sql_query(sql_query, conn)
+
+    return df
